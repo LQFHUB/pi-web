@@ -41,7 +41,7 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab }: Props) {
               alignItems: "center",
               gap: 6,
               height: 36,
-              paddingLeft: 12,
+              paddingLeft: 10,
               paddingRight: 6,
               borderRight: "1px solid var(--border)",
               background: isActive ? "var(--bg)" : "var(--bg-panel)",
@@ -50,11 +50,15 @@ export function TabBar({ tabs, activeTabId, onSelectTab, onCloseTab }: Props) {
               color: isActive ? "var(--text)" : "var(--text-muted)",
               whiteSpace: "nowrap",
               maxWidth: 180,
-              minWidth: 80,
+              minWidth: 60,
               flexShrink: 0,
               userSelect: "none",
-              transition: "background 0.1s, color 0.1s",
+              transition: "background 0.12s, color 0.12s",
+              borderTop: isActive ? "2px solid var(--accent)" : "2px solid transparent",
+              position: "relative",
             }}
+            onMouseEnter={(e) => { if (!isActive) { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text)"; } }}
+            onMouseLeave={(e) => { if (!isActive) { e.currentTarget.style.background = "var(--bg-panel)"; e.currentTarget.style.color = "var(--text-muted)"; } }}
           >
             <span style={{ flexShrink: 0, opacity: isActive ? 1 : 0.7, display: "flex", alignItems: "center" }}>
               {getFileIcon(tab.label, 13)}

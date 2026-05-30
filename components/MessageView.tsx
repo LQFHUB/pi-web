@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useRef, useEffect, useMemo } from "react";
+import { useState, useRef, useEffect, useMemo, memo } from "react";
 import ReactMarkdown from "react-markdown";
 import remarkGfm from "remark-gfm";
 import { Prism as SyntaxHighlighter } from "react-syntax-highlighter";
@@ -66,7 +66,7 @@ function copyText(text: string): Promise<void> {
   }
 }
 
-export function MessageView({ message, isStreaming, toolResults, modelNames, entryId, onFork, forking, onNavigate, prevAssistantEntryId, onEditContent, showTimestamp, prevTimestamp }: Props) {
+export const MessageView = memo(function MessageView({ message, isStreaming, toolResults, modelNames, entryId, onFork, forking, onNavigate, prevAssistantEntryId, onEditContent, showTimestamp, prevTimestamp }: Props) {
   if (message.role === "user") {
     return <UserMessageView message={message as UserMessage} entryId={entryId} onFork={onFork} forking={forking} onNavigate={onNavigate} prevAssistantEntryId={prevAssistantEntryId} onEditContent={onEditContent} />;
   }
@@ -78,7 +78,7 @@ export function MessageView({ message, isStreaming, toolResults, modelNames, ent
     return null;
   }
   return null;
-}
+});
 
 function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAssistantEntryId, onEditContent }: {
   message: UserMessage;
@@ -128,15 +128,18 @@ function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAs
             flex: 1,
             minWidth: 0,
             background: "var(--user-bg)",
-            border: "1px solid rgba(59,130,246,0.2)",
+            border: "1px solid var(--user-border)",
             borderRadius: 12,
             padding: "8px 12px",
-            fontSize: 14,
-            lineHeight: 1.6,
+            fontSize: 13,
+            lineHeight: 1.65,
             color: "var(--text)",
             whiteSpace: "pre-wrap",
             wordBreak: "break-word",
+            transition: "transform 0.15s",
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.005)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = "scale(1)"; }}
         >
           {imageBlocks.length > 0 && (
             <div style={{ display: "flex", gap: 6, flexWrap: "wrap", marginBottom: content ? 8 : 0 }}>
@@ -157,7 +160,7 @@ function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAs
                     key={i}
                     src={src}
                     alt=""
-                    style={{ maxWidth: 240, maxHeight: 240, borderRadius: 6, objectFit: "contain", display: "block", border: "1px solid rgba(59,130,246,0.15)" }}
+                    style={{ maxWidth: 240, maxHeight: 240, borderRadius: 6, objectFit: "contain", display: "block", border: "1px solid var(--user-border)" }}
                   />
                 );
               })}
@@ -407,14 +410,23 @@ function AssistantMessageView({
         style={{
           fontSize: 11,
           color: "var(--text-dim)",
-          marginBottom: 4,
+          marginBottom: 6,
           display: "flex",
           alignItems: "center",
-          gap: 6,
+          gap: 8,
         }}
       >
+        <div style={{
+          width: 18, height: 18, borderRadius: 5,
+          background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center",
+          color: "var(--accent-text)", fontSize: 9, fontWeight: 700, flexShrink: 0,
+          transition: "transform 0.15s",
+        }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.15) rotate(-5deg)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; }}
+        >{message.model?.charAt(0).toUpperCase() ?? "A"}</div>
         {message.provider && (
-          <span>{modelNames?.[`${message.provider}:${message.model}`] ?? modelNames?.[message.model] ?? message.model}</span>
+          <span style={{ fontWeight: 600, color: "var(--accent)" }}>{modelNames?.[`${message.provider}:${message.model}`] ?? modelNames?.[message.model] ?? message.model}</span>
         )}
         {isStreaming && (() => {
           let chars = 0;
@@ -567,27 +579,34 @@ function ThinkingBlock({ block, duration }: { block: ThinkingContent; duration?:
     <div
       style={{
         border: "1px solid var(--border)",
-        borderRadius: 6,
+        borderRadius: 8,
         overflow: "hidden",
         fontSize: 13,
+        transition: "border-color 0.15s",
       }}
+      onMouseEnter={(e) => { e.currentTarget.style.borderColor = "var(--text-muted)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.borderColor = "var(--border)"; }}
     >
       <button
         onClick={() => setExpanded((v) => !v)}
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 6,
+          gap: 8,
           width: "100%",
-          padding: "6px 10px",
+          padding: "7px 12px",
           background: "var(--bg-panel)",
           border: "none",
           color: "var(--text-muted)",
           cursor: "pointer",
           fontSize: 12,
           textAlign: "left",
+          transition: "background 0.12s",
         }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = "var(--bg-panel)"; }}
       >
+        <span style={{ width: 7, height: 7, borderRadius: "50%", background: "var(--text-dim)", flexShrink: 0, display: "inline-block" }} />
         <span>Thinking</span>
         {duration !== undefined && (
           <span style={{ marginLeft: "auto", fontSize: 11, color: "var(--text-dim)", fontVariantNumeric: "tabular-nums" }}>{duration}s</span>
@@ -613,9 +632,26 @@ function ThinkingBlock({ block, duration }: { block: ThinkingContent; duration?:
 }
 
 
+// Tool colors and icons
+const TOOL_META: Record<string, { color: string; icon: string; label: string }> = {
+  edit:    { color: "#3b82f6", icon: '<path d="M17 3a2.828 2.828 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5L17 3z"/>', label: "Edit" },
+  write:   { color: "#f59e0b", icon: '<path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>', label: "Write" },
+  read:    { color: "#8b5cf6", icon: '<path d="M2 3h6a4 4 0 0 1 4 4v14a3 3 0 0 0-3-3H2z"/><path d="M22 3h-6a4 4 0 0 0-4 4v14a3 3 0 0 1 3-3h7z"/>', label: "Read" },
+  bash:    { color: "#10b981", icon: '<polyline points="4 17 10 11 4 5"/><line x1="12" y1="19" x2="20" y2="19"/>', label: "Bash" },
+  grep:    { color: "#ec4899", icon: '<circle cx="11" cy="11" r="8"/><line x1="21" y1="21" x2="16.65" y2="16.65"/>', label: "Grep" },
+  ls:      { color: "#14b8a6", icon: '<line x1="8" y1="6" x2="21" y2="6"/><line x1="8" y1="12" x2="21" y2="12"/><line x1="8" y1="18" x2="21" y2="18"/><line x1="3" y1="6" x2="3.01" y2="6"/><line x1="3" y1="12" x2="3.01" y2="12"/><line x1="3" y1="18" x2="3.01" y2="18"/>', label: "Ls" },
+  find:    { color: "#f97316", icon: '<polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/>', label: "Find" },
+  default: { color: "var(--accent)", icon: '<path d="M14.7 6.3a1 1 0 0 0 0 1.4l1.6 1.6a1 1 0 0 0 1.4 0l3.77-3.77a6 6 0 0 1-7.94 7.94l-6.91 6.91a2.12 2.12 0 0 1-3-3l6.91-6.91a6 6 0 0 1 7.94-7.94l-3.76 3.76z"/>', label: "Tool" },
+};
+
+function getToolMeta(name: string) {
+  return TOOL_META[name.toLowerCase()] ?? TOOL_META.default;
+}
+
 function ToolCallBlock({ block, result, isRunning, duration }: { block: ToolCallContent; result?: ToolResultMessage; isRunning?: boolean; duration?: number }) {
   const [expanded, setExpanded] = useState(false);
   const inputStr = JSON.stringify(block.input, null, 2);
+  const meta = getToolMeta(block.toolName);
 
   // Result display
   const resultText = result
@@ -627,11 +663,14 @@ function ToolCallBlock({ block, result, isRunning, duration }: { block: ToolCall
   return (
     <div
       style={{
-        borderRadius: 7,
+        borderRadius: 8,
         overflow: "hidden",
         fontSize: 12,
-        border: isError ? "1px solid rgba(248,113,113,0.45)" : "1px solid rgba(34,197,94,0.25)",
-        background: isError ? "rgba(248,113,113,0.05)" : "rgba(34,197,94,0.04)",
+        border: `1px solid ${isError ? "rgba(248,113,113,0.45)" : meta.color}22`,
+        background: isError ? "rgba(248,113,113,0.05)" : "var(--bg-panel)",
+        marginTop: 8,
+        marginBottom: 8,
+        boxShadow: "0 1px 3px rgba(0,0,0,0.04)",
       }}
     >
       {/* ── Tool call header ── */}
@@ -640,26 +679,46 @@ function ToolCallBlock({ block, result, isRunning, duration }: { block: ToolCall
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 7,
+          gap: 8,
           width: "100%",
-          padding: "6px 10px",
-          background: "none",
+          padding: "8px 12px",
+          paddingLeft: 10,
+          background: "var(--bg-panel)",
           border: "none",
+          borderLeft: `3px solid ${isError ? "#f87171" : meta.color}`,
           color: "var(--text-muted)",
           cursor: "pointer",
           fontSize: 12,
           textAlign: "left",
           minWidth: 0,
+          transition: "background 0.12s",
         }}
+        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = "var(--bg-panel)"; }}
       >
-        <span style={{ color: isError ? "#f87171" : "#16a34a", fontFamily: "var(--font-mono)", fontWeight: 600, fontSize: 11, flexShrink: 0 }}>
-          {block.toolName}
+        <div style={{
+          width: 22, height: 22, borderRadius: 6,
+          background: `${meta.color}18`,
+          color: meta.color,
+          display: "flex", alignItems: "center", justifyContent: "center", flexShrink: 0,
+          transition: "transform 0.3s ease",
+          fontWeight: 700, fontSize: 10,
+        }}
+          onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.15)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; }}
+        >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke={meta.color} strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ display: 'block' }} dangerouslySetInnerHTML={{ __html: meta.icon }} />
+        </div>
+        <span style={{ color: meta.color, fontFamily: "var(--font-mono)", fontWeight: 700, fontSize: 13, flexShrink: 0, letterSpacing: "-0.01em" }}>
+          {meta.label}
         </span>
         <span style={{ color: "var(--text-dim)", fontFamily: "var(--font-mono)", fontSize: 11, overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1, minWidth: 0 }}>
           {getToolPreview(block)}
         </span>
         {duration !== undefined && (
-          <span style={{ fontSize: 11, color: "var(--text-dim)", flexShrink: 0, fontVariantNumeric: "tabular-nums" }}>{duration}s</span>
+          <span style={{ fontSize: 11, color: "var(--text-dim)", flexShrink: 0, fontVariantNumeric: "tabular-nums", display: "flex", alignItems: "center", gap: 4 }}>
+            {duration}s
+          </span>
         )}
         <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--text-dim)" strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0, transform: expanded ? "rotate(180deg)" : "none", transition: "transform 0.15s" }}>
           <polyline points="2 3.5 5 6.5 8 3.5" />
@@ -784,14 +843,15 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
         position: "relative",
         marginTop: 4,
         marginBottom: 4,
-        borderRadius: 6,
+        borderRadius: 10,
         overflow: "hidden",
         border: "1px solid var(--border)",
       }}
     >
       <div
+        className="codeblock-header"
         style={{
-          padding: "3px 10px",
+          padding: "5px 12px",
           background: "var(--bg-panel)",
           borderBottom: "1px solid var(--border)",
           fontSize: 11,
@@ -801,17 +861,35 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
           alignItems: "center",
         }}
       >
-        <span>{lang}</span>
+        <div style={{ display: "flex", alignItems: "center", gap: 6 }}>
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+            <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
+            <polyline points="14 2 14 8 20 8"/>
+          </svg>
+          <span>{lang || "code"}</span>
+        </div>
         <button
           onClick={copy}
+          className="codeblock-copy-btn"
           style={{
             background: "none",
             border: "none",
-            color: "var(--text-muted)",
+            color: "var(--text-dim)",
             cursor: "pointer",
             fontSize: 11,
+            display: "flex",
+            alignItems: "center",
+            gap: 4,
+            opacity: 0.5,
+            transition: "opacity 0.12s, color 0.12s",
           }}
+          onMouseEnter={(e) => { e.currentTarget.style.opacity = "1"; e.currentTarget.style.color = "var(--accent)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.opacity = "0.5"; e.currentTarget.style.color = "var(--text-dim)"; }}
         >
+          <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round">
+            <rect x="9" y="9" width="13" height="13" rx="2" ry="2"/>
+            <path d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"/>
+          </svg>
           {copied ? "copied" : "copy"}
         </button>
       </div>

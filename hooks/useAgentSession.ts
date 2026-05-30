@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useCallback, useRef, useEffect, useReducer } from "react";
+import { useState, useCallback, useRef, useEffect, useReducer, useMemo } from "react";
 import type { AgentMessage, SessionInfo, SessionTreeNode } from "@/lib/types";
 import { normalizeToolCalls } from "@/lib/normalize";
 import { sendAgentCommand } from "@/lib/agent-client";
@@ -131,7 +131,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
   const currentModel = currentModelOverride ?? data?.context.model ?? pendingModel ?? null;
   const displayModel = isNew ? newSessionModel : currentModel;
 
-  const sessionStats = (() => {
+  const sessionStats = useMemo(() => {
     const tokens = { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 };
     let cost = 0;
     for (const msg of messages) {
@@ -146,7 +146,7 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     }
     const total = tokens.input + tokens.output + tokens.cacheRead + tokens.cacheWrite;
     return total > 0 ? { tokens, cost } : null;
-  })();
+  }, [messages]);
 
   const loadSession = useCallback(async (sid: string, showLoading = false, includeState = false) => {
     try {

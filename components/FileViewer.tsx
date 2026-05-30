@@ -620,7 +620,10 @@ function TextFileViewer({ filePath, cwd }: Props) {
 
   if (loading) {
     return (
-      <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: 13 }}>
+      <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-muted)", fontSize: 13, gap: 8, flexDirection: "column" }}>
+        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeLinecap="round" style={{ animation: "spin 1s linear infinite" }}>
+          <path d="M12 2v4M12 18v4M4.93 4.93l2.83 2.83M16.24 16.24l2.83 2.83M2 12h4M18 12h4"/>
+        </svg>
         Loading...
       </div>
     );
@@ -648,50 +651,55 @@ function TextFileViewer({ filePath, cwd }: Props) {
         style={{
           display: "flex",
           alignItems: "center",
-          gap: 12,
-          padding: "4px 16px",
+          gap: 8,
+          padding: "4px 14px",
           borderBottom: "1px solid var(--border)",
           fontSize: 11,
           color: "var(--text-dim)",
-          background: "var(--bg)",
+          background: "var(--bg-panel)",
           flexShrink: 0,
+          height: 32,
         }}
       >
-        <span style={{ fontFamily: "var(--font-mono)" }} title={filePath}>
+        <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.8" strokeLinecap="round" style={{flexShrink:0}}>
+          <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><polyline points="14 2 14 8 20 8"/>
+        </svg>
+        <span style={{ fontFamily: "var(--font-mono)", overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap", flex: 1 }} title={filePath}>
           {getRelativeFilePath(filePath, cwd)}
         </span>
-        <span style={{ marginLeft: "auto" }}>{data.language}</span>
+        <span style={{ padding: "1px 6px", background: "var(--bg-subtle)", borderRadius: 4 }}>{data.language}</span>
         {viewMode === "source" && <span>{lines.length} lines</span>}
         <span>{formatSize(data.size)}</span>
 
         {/* Live watch indicator */}
         <span
           title={watching ? "Live sync active" : "Not watching"}
-          style={{ display: "flex", alignItems: "center", gap: 4, color: watching ? "#4ade80" : "var(--text-dim)" }}
+          style={{ display: "flex", alignItems: "center", gap: 4, padding: "1px 6px", background: watching ? "rgba(74,222,128,0.1)" : "transparent", borderRadius: 4, color: watching ? "var(--success)" : "var(--text-dim)" }}
         >
           <span
             style={{
-              width: 7,
-              height: 7,
+              width: 6,
+              height: 6,
               borderRadius: "50%",
-              background: watching ? "#4ade80" : "var(--border)",
+              background: watching ? "var(--success)" : "var(--border)",
               display: "inline-block",
-              boxShadow: watching ? "0 0 4px #4ade80" : "none",
+              boxShadow: watching ? "0 0 4px rgba(74,222,128,0.5)" : "none",
             }}
           />
           {watching ? "live" : "static"}
         </span>
 
-        {/* Diff / Source toggle — shown only when there are changes */}
+        {/* Toggle button group style */}
         {hasDiff && (
-          <div style={{ display: "flex", borderRadius: 5, overflow: "hidden", border: "1px solid var(--border)" }}>
+          <div style={{ display: "flex", borderRadius: 6, overflow: "hidden", border: "1px solid var(--border)" }}>
             <button
               onClick={() => setViewMode("source")}
               style={{
-                padding: "2px 8px", fontSize: 11, border: "none", cursor: "pointer",
-                background: viewMode === "source" ? "var(--bg-selected)" : "var(--bg-hover)",
-                color: viewMode === "source" ? "var(--text)" : "var(--text-muted)",
+                padding: "2px 10px", fontSize: 11, border: "none", cursor: "pointer", height: 22,
+                background: viewMode === "source" ? "var(--bg-selected)" : "transparent",
+                color: viewMode === "source" ? "var(--accent)" : "var(--text-muted)",
                 fontWeight: viewMode === "source" ? 600 : 400,
+                transition: "background 0.12s, color 0.12s",
               }}
             >
               Source
@@ -699,13 +707,14 @@ function TextFileViewer({ filePath, cwd }: Props) {
             <button
               onClick={() => setViewMode("diff")}
               style={{
-                padding: "2px 8px", fontSize: 11, border: "none", borderLeft: "1px solid var(--border)", cursor: "pointer",
-                background: viewMode === "diff" ? "var(--bg-selected)" : "var(--bg-hover)",
-                color: viewMode === "diff" ? "var(--text)" : "var(--text-muted)",
+                padding: "2px 10px", fontSize: 11, border: "none", borderLeft: "1px solid var(--border)", cursor: "pointer", height: 22,
+                background: viewMode === "diff" ? "var(--bg-selected)" : "transparent",
+                color: viewMode === "diff" ? "var(--accent)" : "var(--text-muted)",
                 fontWeight: viewMode === "diff" ? 600 : 400,
+                transition: "background 0.12s, color 0.12s",
               }}
             >
-              Diff {changeCount > 0 && <span style={{ color: "#4ade80", marginLeft: 2 }}>+{changeCount}</span>}
+              Diff {changeCount > 0 && <span style={{ color: "var(--success)", marginLeft: 2 }}>+{changeCount}</span>}
             </button>
           </div>
         )}
@@ -716,69 +725,44 @@ function TextFileViewer({ filePath, cwd }: Props) {
             onClick={() => setWrapLines((v) => !v)}
             title={wrapLines ? "Disable word wrap" : "Enable word wrap"}
             style={{
-              padding: "2px 8px", fontSize: 11, cursor: "pointer",
-              background: wrapLines ? "var(--bg-selected)" : "var(--bg-hover)",
-              color: wrapLines ? "var(--text)" : "var(--text-muted)",
-              border: "1px solid var(--border)", borderRadius: 5,
+              padding: "2px 10px", fontSize: 11, cursor: "pointer", height: 22,
+              background: wrapLines ? "var(--bg-selected)" : "transparent",
+              color: wrapLines ? "var(--accent)" : "var(--text-muted)",
+              border: "1px solid var(--border)", borderRadius: 6,
               fontWeight: wrapLines ? 600 : 400,
+              transition: "background 0.12s, color 0.12s",
             }}
           >
             wrap
           </button>
         )}
 
-        {/* HTML source/preview toggle */}
-        {isHtml && viewMode === "source" && (
-          <div style={{ display: "flex", borderRadius: 5, overflow: "hidden", border: "1px solid var(--border)" }}>
+        {/* HTML/MD source/preview toggle */}
+        {(isHtml || isMarkdown) && viewMode === "source" && (
+          <div style={{ display: "flex", borderRadius: 6, overflow: "hidden", border: "1px solid var(--border)" }}>
             <button
               onClick={() => setPreviewMode(false)}
               style={{
-                padding: "2px 8px", fontSize: 11, border: "none", cursor: "pointer",
-                background: !previewMode ? "var(--bg-selected)" : "var(--bg-hover)",
-                color: !previewMode ? "var(--text)" : "var(--text-muted)",
+                padding: "2px 10px", fontSize: 11, border: "none", cursor: "pointer", height: 22,
+                background: !previewMode ? "var(--bg-selected)" : "transparent",
+                color: !previewMode ? "var(--accent)" : "var(--text-muted)",
                 fontWeight: !previewMode ? 600 : 400,
+                transition: "background 0.12s, color 0.12s",
               }}
             >
-              Code
+              {isHtml ? "Code" : "Raw"}
             </button>
             <button
               onClick={() => setPreviewMode(true)}
               style={{
-                padding: "2px 8px", fontSize: 11, border: "none", borderLeft: "1px solid var(--border)", cursor: "pointer",
-                background: previewMode ? "var(--bg-selected)" : "var(--bg-hover)",
-                color: previewMode ? "var(--text)" : "var(--text-muted)",
+                padding: "2px 10px", fontSize: 11, border: "none", borderLeft: "1px solid var(--border)", cursor: "pointer", height: 22,
+                background: previewMode ? "var(--bg-selected)" : "transparent",
+                color: previewMode ? "var(--accent)" : "var(--text-muted)",
                 fontWeight: previewMode ? 600 : 400,
+                transition: "background 0.12s, color 0.12s",
               }}
             >
               Preview
-            </button>
-          </div>
-        )}
-
-        {/* Markdown preview/raw toggle */}
-        {isMarkdown && viewMode === "source" && (
-          <div style={{ display: "flex", borderRadius: 5, overflow: "hidden", border: "1px solid var(--border)" }}>
-            <button
-              onClick={() => setPreviewMode(true)}
-              style={{
-                padding: "2px 8px", fontSize: 11, border: "none", cursor: "pointer",
-                background: previewMode ? "var(--bg-selected)" : "var(--bg-hover)",
-                color: previewMode ? "var(--text)" : "var(--text-muted)",
-                fontWeight: previewMode ? 600 : 400,
-              }}
-            >
-              Preview
-            </button>
-            <button
-              onClick={() => setPreviewMode(false)}
-              style={{
-                padding: "2px 8px", fontSize: 11, border: "none", borderLeft: "1px solid var(--border)", cursor: "pointer",
-                background: !previewMode ? "var(--bg-selected)" : "var(--bg-hover)",
-                color: !previewMode ? "var(--text)" : "var(--text-muted)",
-                fontWeight: !previewMode ? 600 : 400,
-              }}
-            >
-              Raw
             </button>
           </div>
         )}

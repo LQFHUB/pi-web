@@ -17,10 +17,11 @@
     "package.json"
   ],
   "scripts": {
-    "dev": "next dev -p 30141",
+    "dev": "NODE_ENV=development next dev -p 30141",
     "build": "next build --webpack",
     "start": "next start -p 30141",
     "lint": "eslint .",
+    "typecheck": "tsc --noEmit",
     "release": "npm version patch --no-git-tag-version && npm run build && npm publish --access public"
   },
   "dependencies": {
@@ -44,6 +45,6 @@
     "eslint-config-next": "16.2.1",
     "postcss": "^8",
     "tailwindcss": "^4.2.2",
-    "typescript": "^5"
+    "typescript": "5.9.3"
   }
 }

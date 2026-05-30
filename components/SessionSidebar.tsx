@@ -108,91 +108,22 @@ function buildSessionTree(sessions: SessionInfo[]): SessionTreeNode[] {
   return roots;
 }
 
-const SCRAMBLE_CHARS = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789!@#$%^&*";
-
-function useScramble(target: string, running: boolean): string {
-  const [display, setDisplay] = useState(target);
-  const frameRef = useRef<number | null>(null);
-  const iterRef = useRef(0);
-
-  useEffect(() => {
-    if (!running) {
-      setDisplay(target);
-      return;
-    }
-    iterRef.current = 0;
-    const totalFrames = target.length * 4;
-
-    const step = () => {
-      iterRef.current += 1;
-      const progress = iterRef.current / totalFrames;
-      const resolved = Math.floor(progress * target.length);
-
-      setDisplay(
-        target
-          .split("")
-          .map((char, i) => {
-            if (char === " ") return " ";
-            if (i < resolved) return char;
-            return SCRAMBLE_CHARS[Math.floor(Math.random() * SCRAMBLE_CHARS.length)];
-          })
-          .join("")
-      );
-
-      if (iterRef.current < totalFrames) {
-        frameRef.current = requestAnimationFrame(step);
-      } else {
-        setDisplay(target);
-      }
-    };
-
-    frameRef.current = requestAnimationFrame(step);
-    return () => { if (frameRef.current) cancelAnimationFrame(frameRef.current); };
-  }, [target, running]);
-
-  return display;
-}
-
-function PiAgentTitle() {
-  const [showVersion, setShowVersion] = useState(false);
-  const [scrambling, setScrambling] = useState(false);
-  const revertTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
-
-  const target = showVersion ? `${process.env.NEXT_PUBLIC_APP_VERSION ?? "0.0.0"}p${process.env.NEXT_PUBLIC_PI_VERSION ?? "0.0.0"}` : "Pi Agent Web";
-  const display = useScramble(target, scrambling);
-
-  const triggerScramble = useCallback((toVersion: boolean) => {
-    setShowVersion(toVersion);
-    setScrambling(true);
-    setTimeout(() => setScrambling(false), (toVersion ? 6 : 8) * 4 * (1000 / 60) + 100);
-  }, []);
-
-  const handleClick = useCallback(() => {
-    if (revertTimerRef.current) clearTimeout(revertTimerRef.current);
-
-    const next = !showVersion;
-    triggerScramble(next);
-
-    if (next) {
-      revertTimerRef.current = setTimeout(() => triggerScramble(false), 3000);
-    }
-  }, [showVersion, triggerScramble]);
-
-  useEffect(() => () => { if (revertTimerRef.current) clearTimeout(revertTimerRef.current); }, []);
-
+function PiLogo() {
   return (
-    <button
-      onClick={handleClick}
-      style={{
-        background: "none", border: "none", padding: 0, cursor: "default",
-        fontWeight: 700, fontSize: 15, letterSpacing: "-0.01em",
-        color: showVersion ? "var(--accent)" : "var(--text)",
-        fontFamily: "var(--font-mono)",
-        minWidth: "6ch",
-      }}
-    >
-      {display}
-    </button>
+    <span style={{display:'inline-flex',alignItems:'center',justifyContent:'center',width:28,height:28,flexShrink:0}}>
+      <svg width="28" height="28" viewBox="0 0 32 32" fill="none" xmlns="http://www.w3.org/2000/svg" style={{display:'block'}}>
+        <defs>
+          <linearGradient id="lg-bg"><stop offset="0%" stopColor="var(--accent)"/><stop offset="100%" stopColor="var(--teal)"/></linearGradient>
+          <linearGradient id="lg-shine"><stop offset="0%" stopColor="rgba(255,255,255,0.25)"/><stop offset="50%" stopColor="rgba(255,255,255,0)"/></linearGradient>
+          <filter id="lg-shadow"><feDropShadow dx="0" dy="1" stdDeviation="1.5" floodColor="rgba(107,140,255,0.3)"/></filter>
+        </defs>
+        <rect x="0.5" y="0.5" width="31" height="31" rx="8" fill="var(--bg-panel)" stroke="var(--border)" strokeWidth="0.5"/>
+        <rect x="2" y="2" width="28" height="28" rx="6.5" fill="url(#lg-bg)" filter="url(#lg-shadow)"/>
+        <rect x="2" y="2" width="28" height="28" rx="6.5" fill="url(#lg-shine)"/>
+        <text x="16" y="21.5" textAnchor="middle" fill="#fff" fontSize="17" fontWeight="700" fontFamily="var(--font-mono)">&pi;</text>
+        <rect x="2" y="2" width="28" height="28" rx="6.5" fill="none" stroke="rgba(255,255,255,0.08)" strokeWidth="0.5"/>
+      </svg>
+    </span>
   );
 }
 
@@ -344,7 +275,10 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
         }}
       >
         <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between", marginBottom: 10 }}>
-          <PiAgentTitle />
+          <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+            <PiLogo />
+            <span style={{ fontSize: 14, fontWeight: 600, color: "var(--text)", letterSpacing: "-0.01em" }}>Pi Agent</span>
+          </div>
           <div style={{ display: "flex", gap: 6 }}>
             <button
               onClick={handleNewSession}
@@ -845,6 +779,7 @@ function SessionItem({
   onToggleCollapse?: () => void;
 }) {
   const [hovered, setHovered] = useState(false);
+
   const [renaming, setRenaming] = useState(false);
   const [renameValue, setRenameValue] = useState("");
   const [confirmDelete, setConfirmDelete] = useState(false);
@@ -919,10 +854,12 @@ function SessionItem({
         borderLeft: confirmDelete
           ? "2px solid #ef4444"
           : isSelected ? "2px solid var(--accent)" : "2px solid transparent",
-        transition: "background 0.1s",
+        transition: "background 0.12s, border-color 0.12s, transform 0.12s",
+        transform: hovered && !isSelected ? "translateX(3px)" : "none",
         opacity: deleting ? 0.5 : 1,
-        gap: 6,
+        gap: 8,
         overflow: "hidden",
+        borderRadius: 8,
       }}
     >
       {confirmDelete ? (
@@ -1002,7 +939,7 @@ function SessionItem({
               <path d="M18 9a9 9 0 0 1-9 9" />
             </svg>
           )}
-          <div style={{ flex: 1, minWidth: 0 }}>
+<div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
                 fontSize: 12,
@@ -1012,6 +949,7 @@ function SessionItem({
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
                 color: "var(--text)",
+                transition: "color 0.12s",
               }}
               title={title}
             >

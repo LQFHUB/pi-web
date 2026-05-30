@@ -43,9 +43,9 @@ function getMessagePreview(msg: AgentMessage | Partial<AgentMessage>): string {
 
 function getNodeColor(msg: AgentMessage | Partial<AgentMessage>): { bg: string; border: string } {
   if (msg.role === "user") {
-    return { bg: "rgba(37,99,235,0.18)", border: "rgba(37,99,235,0.7)" };
+    return { bg: "rgba(107,140,255,0.18)", border: "rgba(107,140,255,0.7)" };
   }
-  return { bg: "rgba(107,114,128,0.12)", border: "rgba(107,114,128,0.5)" };
+  return { bg: "rgba(107,140,255,0.08)", border: "rgba(107,140,255,0.35)" };
 }
 
 function hasTextContent(msg: AgentMessage | Partial<AgentMessage>): boolean {
@@ -73,6 +73,12 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
   const [mouseYRatio, setMouseYRatio] = useState<number | null>(null);
   const draggingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
+
+  const handleWheel = useCallback((e: React.WheelEvent) => {
+    const el = scrollContainer.current;
+    if (!el) return;
+    el.scrollBy({ top: e.deltaY, behavior: "auto" });
+  }, [scrollContainer]);
 
   const allMessages = useMemo(
     () => (streamingMessage ? [...messages, streamingMessage] : messages) as (AgentMessage | Partial<AgentMessage>)[],
@@ -235,6 +241,7 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
     <div
       ref={containerRef}
       onMouseDown={handleMouseDown}
+      onWheel={handleWheel}
       onMouseEnter={() => setMinimapHovered(true)}
       onMouseLeave={() => { setMinimapHovered(false); setMouseYRatio(null); }}
       onMouseMove={(e) => {
@@ -245,7 +252,7 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
         width: MINIMAP_WIDTH,
         flexShrink: 0,
         position: "relative",
-        cursor: "default",
+        cursor: minimapHovered ? "ns-resize" : "default",
         userSelect: "none",
         borderLeft: "1px solid var(--border)",
         background: "var(--bg-panel)",

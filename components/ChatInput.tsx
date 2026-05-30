@@ -72,6 +72,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const [toolDropdownOpen, setToolDropdownOpen] = useState(false);
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
+  const [inputFocused, setInputFocused] = useState(false);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
@@ -336,20 +337,20 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             display: "flex",
             gap: 8,
             alignItems: "center",
-            background: "var(--bg)",
-            border: `1px solid ${isStreaming && (onSteer || onFollowUp)
-              ? "rgba(234,179,8,0.4)"
-              : "color-mix(in srgb, var(--border) 70%, transparent)"}`,
+            background: "var(--input-bg)",
+            border: `1px solid ${inputFocused ? "var(--accent)" : (isStreaming && (onSteer || onFollowUp) ? "rgba(234,179,8,0.4)" : "var(--input-border)")}`,
             borderRadius: 14,
-            padding: "10px 10px 10px 14px",
-            boxShadow: "0 1px 2px rgba(15,23,42,0.04), 0 8px 24px -12px rgba(15,23,42,0.10)",
-            transition: "border-color 0.15s, background 0.15s, box-shadow 0.15s",
+            padding: "8px 8px 8px 16px",
+            boxShadow: inputFocused ? "0 2px 16px rgba(107,140,255,0.10)" : "var(--input-shadow)",
+            transition: "border-color 0.2s, box-shadow 0.2s, background 0.2s",
           } as React.CSSProperties}
         >
           <textarea
             ref={textareaRef}
             value={value}
             onChange={(e) => setValue(e.target.value)}
+            onFocus={() => setInputFocused(true)}
+            onBlur={() => setInputFocused(false)}
             onKeyDown={handleKeyDown}
             onInput={handleInput}
             onPaste={handlePaste}
@@ -385,17 +386,17 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
                   title="打断 Agent 当前运行，立即注入消息"
                   style={{
                     display: "flex", alignItems: "center", gap: 5,
-                    padding: "7px 12px",
+                    padding: "6px 12px", height: 28,
                     background: (value.trim() || attachedImages.length) ? "rgba(234,179,8,0.12)" : "none",
                     border: "1px solid rgba(234,179,8,0.35)",
                     borderRadius: 8,
                     color: (value.trim() || attachedImages.length) ? "rgba(180,130,0,1)" : "var(--text-dim)",
                     cursor: (value.trim() || attachedImages.length) ? "pointer" : "not-allowed",
-                    fontSize: 13, fontWeight: 600, letterSpacing: "-0.01em",
-                    transition: "background 0.12s",
+                    fontSize: 12, fontWeight: 600, letterSpacing: "-0.01em",
+                    transition: "background 0.12s, transform 0.1s",
                   }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <path d="M5 1 L9 5 L5 9" /><line x1="1" y1="5" x2="9" y2="5" />
                   </svg>
                   Steer
@@ -408,17 +409,17 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
                   title="在 Agent 完成后排队发送"
                   style={{
                     display: "flex", alignItems: "center", gap: 5,
-                    padding: "7px 12px",
+                    padding: "6px 12px", height: 28,
                     background: (value.trim() || attachedImages.length) ? "rgba(129,140,248,0.12)" : "none",
                     border: "1px solid rgba(129,140,248,0.35)",
                     borderRadius: 8,
                     color: (value.trim() || attachedImages.length) ? "rgba(99,102,241,1)" : "var(--text-dim)",
                     cursor: (value.trim() || attachedImages.length) ? "pointer" : "not-allowed",
-                    fontSize: 13, fontWeight: 600, letterSpacing: "-0.01em",
-                    transition: "background 0.12s",
+                    fontSize: 12, fontWeight: 600, letterSpacing: "-0.01em",
+                    transition: "background 0.12s, transform 0.1s",
                   }}
                 >
-                  <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
+                  <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round">
                     <line x1="5" y1="1" x2="5" y2="6" /><polyline points="2.5 3.5 5 1 7.5 3.5" />
                     <line x1="2" y1="9" x2="8" y2="9" />
                   </svg>
@@ -433,21 +434,31 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
               style={{
                 flexShrink: 0,
                 alignSelf: "flex-end",
-                display: "flex", alignItems: "center", gap: 6,
-                padding: "7px 14px",
+                display: "flex", alignItems: "center", justifyContent: "center", gap: 5,
+                padding: "6px 14px", height: 28,
                 background: (value.trim() || attachedImages.length) ? "var(--accent)" : "var(--bg-panel)",
                 border: "none",
-                borderRadius: 8,
-                color: (value.trim() || attachedImages.length) ? "#fff" : "var(--text-dim)",
+                borderRadius: 7,
+                color: (value.trim() || attachedImages.length) ? "var(--accent-text)" : "var(--text-dim)",
                 cursor: (value.trim() || attachedImages.length) ? "pointer" : "not-allowed",
-                fontSize: 13,
+                fontSize: 12,
                 fontWeight: 600,
                 letterSpacing: "-0.01em",
-                boxShadow: (value.trim() || attachedImages.length) ? "0 1px 3px rgba(37,99,235,0.25)" : "none",
-                transition: "background 0.15s, box-shadow 0.15s",
+                transition: "background 0.15s, transform 0.1s, box-shadow 0.15s",
+              }}
+              onMouseEnter={(e) => {
+                if (!value.trim() && !attachedImages.length) return;
+                e.currentTarget.style.background = "var(--accent-hover)";
+                e.currentTarget.style.transform = "scale(1.02)";
+                e.currentTarget.style.boxShadow = "0 2px 10px rgba(107,140,255,0.30)";
+              }}
+              onMouseLeave={(e) => {
+                e.currentTarget.style.background = (value.trim() || attachedImages.length) ? "var(--accent)" : "var(--bg-panel)";
+                e.currentTarget.style.transform = "scale(1)";
+                e.currentTarget.style.boxShadow = (value.trim() || attachedImages.length) ? "none" : "none";
               }}
             >
-              <svg width="14" height="14" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="12" height="12" viewBox="0 0 14 14" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <line x1="2" y1="7" x2="11" y2="7" />
                 <polyline points="7.5 3 12 7 7.5 11" />
               </svg>
@@ -820,17 +831,16 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
                 onClick={onAbort}
                 title="停止 Agent"
                 style={{
-                  display: "flex", alignItems: "center", gap: 6,
-                  padding: "8px 14px",
-                  height: 32,
+                  display: "flex", alignItems: "center", gap: 5,
+                  padding: "6px 14px", height: 28,
                   background: "rgba(239,68,68,0.08)",
                   border: "1px solid rgba(239,68,68,0.3)",
-                  borderRadius: 9,
+                  borderRadius: 7,
                   color: "#ef4444",
                   cursor: "pointer",
                   fontSize: 12, fontWeight: 600,
                   whiteSpace: "nowrap", letterSpacing: "-0.01em",
-                  transition: "background 0.12s",
+                  transition: "background 0.12s, transform 0.1s",
                 }}
                 onMouseEnter={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.16)"; }}
                 onMouseLeave={(e) => { e.currentTarget.style.background = "rgba(239,68,68,0.08)"; }}

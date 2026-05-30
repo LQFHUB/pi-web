@@ -242,52 +242,38 @@ export function AppShell() {
         explorerRefreshKey={explorerRefreshKey}
         onAtMention={handleAtMention}
       />
-      <div style={{ padding: "8px", flexShrink: 0, display: "flex", justifyContent: "space-between", gap: 4 }}>
+      <div style={{ padding: "6px", flexShrink: 0, borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 2 }}>
         {([
-          {
-            label: "Models",
-            onClick: () => setModelsConfigOpen(true),
-            disabled: false,
-            icon: (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <rect x="4" y="4" width="16" height="16" rx="2" /><rect x="9" y="9" width="6" height="6" />
-                <line x1="9" y1="1" x2="9" y2="4" /><line x1="15" y1="1" x2="15" y2="4" />
-                <line x1="9" y1="20" x2="9" y2="23" /><line x1="15" y1="20" x2="15" y2="23" />
-                <line x1="20" y1="9" x2="23" y2="9" /><line x1="20" y1="14" x2="23" y2="14" />
-                <line x1="1" y1="9" x2="4" y2="9" /><line x1="1" y1="14" x2="4" y2="14" />
-              </svg>
-            ),
-          },
-          {
-            label: "Skills",
-            onClick: () => setSkillsConfigOpen(true),
-            disabled: !activeCwd && !selectedSession?.cwd && !newSessionCwd,
-            icon: (
-              <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
-                <path d="M12 2L2 7l10 5 10-5-10-5z" />
-                <path d="M2 17l10 5 10-5" />
-                <path d="M2 12l10 5 10-5" />
-              </svg>
-            ),
-          },
-        ] as { label: string; onClick: () => void; disabled: boolean; icon: React.ReactNode }[]).map(({ label, onClick, disabled, icon }) => (
+          { label: "Models", onClick: () => setModelsConfigOpen(true), badge: "4", disabled: false },
+          { label: "Skills", onClick: () => setSkillsConfigOpen(true), badge: "2", disabled: !activeCwd && !selectedSession?.cwd && !newSessionCwd },
+        ] as { label: string; onClick: () => void; badge: string; disabled: boolean }[]).map(({ label, onClick, badge, disabled }) => (
           <button
             key={label}
             onClick={onClick}
             disabled={disabled}
-            title={label}
             style={{
-              flex: 1, display: "flex", alignItems: "center", justifyContent: "center", gap: 6,
-              height: 32, padding: 0, background: "none", border: "none",
-              borderRadius: 9, color: "var(--text-muted)", cursor: disabled ? "default" : "pointer",
-              fontSize: 12, opacity: disabled ? 0.35 : 1,
+              display: "flex", alignItems: "center", gap: 7,
+              width: "100%", padding: "6px 10px", height: 32,
+              background: "none", border: "none", borderRadius: 7,
+              color: "var(--text-muted)", fontSize: 11, cursor: disabled ? "default" : "pointer",
+              textAlign: "left", opacity: disabled ? 0.4 : 1,
               transition: "background 0.12s, color 0.12s",
             }}
             onMouseEnter={(e) => { if (!disabled) { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text)"; } }}
-            onMouseLeave={(e) => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-muted)"; }}
+            onMouseLeave={(e) => { if (!disabled) { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-muted)"; } }}
           >
-            {icon}
-            {label}
+            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              {label === "Models" && <><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/><line x1="9" y1="1" x2="9" y2="4"/><line x1="15" y1="1" x2="15" y2="4"/><line x1="9" y1="20" x2="9" y2="23"/><line x1="15" y1="20" x2="15" y2="23"/><line x1="20" y1="9" x2="23" y2="9"/><line x1="20" y1="14" x2="23" y2="14"/><line x1="1" y1="9" x2="4" y2="9"/><line x1="1" y1="14" x2="4" y2="14"/></>}
+              {label === "Skills" && <><polygon points="12 2 2 7 12 12 22 7 12 2"/><polyline points="2 17 12 22 22 17"/><polyline points="2 12 12 17 22 12"/></>}
+            </svg>
+            <span style={{ flex: 1 }}>{label}</span>
+            <span style={{
+              fontSize: 9, padding: "1px 6px", borderRadius: 10,
+              background: "var(--bg-subtle)",
+              color: "var(--text-dim)",
+              fontWeight: 400,
+              border: "1px solid var(--border)",
+            }}>{badge}</span>
           </button>
         ))}
       </div>
@@ -338,10 +324,12 @@ export function AppShell() {
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 36, height: 36, padding: 0,
               background: "none", border: "none", borderRight: "1px solid var(--border)",
-              color: "var(--text-muted)", cursor: "pointer", flexShrink: 0, transition: "color 0.12s",
+              borderRadius: 0,
+              color: "var(--text-muted)", cursor: "pointer", flexShrink: 0,
+              transition: "background 0.12s, color 0.12s",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-muted)"; }}
           >
             {sidebarOpen ? (
               <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
@@ -365,13 +353,15 @@ export function AppShell() {
               display: "flex", alignItems: "center", justifyContent: "center",
               width: 36, height: 36, padding: 0,
               background: "none", border: "none", borderRight: "1px solid var(--border)",
-              color: "var(--text-muted)", cursor: "pointer", flexShrink: 0, transition: "color 0.12s",
+              borderRadius: 0,
+              color: "var(--text-muted)", cursor: "pointer", flexShrink: 0,
+              transition: "background 0.12s, color 0.12s, transform 0.15s",
             }}
-            onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
-            onMouseLeave={(e) => { e.currentTarget.style.color = "var(--text-muted)"; }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text)"; e.currentTarget.style.transform = "rotate(20deg) scale(1.1)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "none"; e.currentTarget.style.color = "var(--text-muted)"; e.currentTarget.style.transform = "none"; }}
           >
             {isDark ? (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <circle cx="12" cy="12" r="5" />
                 <line x1="12" y1="1" x2="12" y2="3" /><line x1="12" y1="21" x2="12" y2="23" />
                 <line x1="4.22" y1="4.22" x2="5.64" y2="5.64" /><line x1="18.36" y1="18.36" x2="19.78" y2="19.78" />
@@ -379,7 +369,7 @@ export function AppShell() {
                 <line x1="4.22" y1="19.78" x2="5.64" y2="18.36" /><line x1="18.36" y1="5.64" x2="19.78" y2="4.22" />
               </svg>
             ) : (
-              <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+              <svg width="15" height="15" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
                 <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z" />
               </svg>
             )}
@@ -432,10 +422,10 @@ export function AppShell() {
 
             let ctxColor = "var(--text-muted)";
             let ctxStr: string | null = null;
-            if (contextUsage?.contextWindow) {
+            if (contextUsage && contextUsage.contextWindow > 0) {
               const pct = contextUsage.percent;
-              if (pct !== null && pct > 90) ctxColor = "#ef4444";
-              else if (pct !== null && pct > 70) ctxColor = "rgba(234,179,8,0.95)";
+              if (pct !== null && pct > 90) ctxColor = "var(--error)";
+              else if (pct !== null && pct > 70) ctxColor = "var(--warning)";
               ctxStr = pct !== null ? `${pct.toFixed(0)}% / ${fmt(contextUsage.contextWindow)}` : `? / ${fmt(contextUsage.contextWindow)}`;
             }
 
@@ -458,7 +448,7 @@ export function AppShell() {
                 title={tooltip}
                 style={{
                   marginLeft: "auto",
-                  display: "flex", alignItems: "center", gap: 10,
+                  display: "flex", alignItems: "center", gap: 8,
                   paddingLeft: 12,
                   paddingRight: rightPanelOpen ? 12 : 48,
                   height: "100%",
@@ -468,37 +458,38 @@ export function AppShell() {
                 }}
               >
                 {t && t.input > 0 && (
-                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px", background: "var(--bg-subtle)", borderRadius: 6 }}>
+                    <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="var(--teal)" strokeWidth="1.4" strokeLinecap="round">
                       <line x1="5" y1="8.5" x2="5" y2="1.5" /><polyline points="2 4 5 1.5 8 4" />
                     </svg>
                     {fmt(t.input)}
                   </span>
                 )}
                 {t && t.output > 0 && (
-                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px", background: "var(--bg-subtle)", borderRadius: 6 }}>
+                    <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
                       <line x1="5" y1="1.5" x2="5" y2="8.5" /><polyline points="2 6 5 8.5 8 6" />
                     </svg>
                     {fmt(t.output)}
                   </span>
                 )}
                 {t && t.cacheRead > 0 && (
-                  <span style={{ display: "flex", alignItems: "center", gap: 4 }}>
-                    <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px", background: "var(--bg-subtle)", borderRadius: 6 }}>
+                    <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="var(--text-muted)" strokeWidth="1.4" strokeLinecap="round">
                       <path d="M8.5 5a3.5 3.5 0 1 1-1-2.45" /><polyline points="6.5 1.5 8.5 2.5 7.5 4.5" />
                     </svg>
                     {fmt(t.cacheRead)}
                   </span>
                 )}
                 {costStr && (
-                  <span style={{ display: "flex", alignItems: "center", color: "var(--text)", fontWeight: 500 }}>
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px", background: "var(--bg-subtle)", borderRadius: 6, color: "var(--accent)", fontWeight: 500 }}>
+                    <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round"><rect x="4" y="4" width="16" height="16" rx="2"/><rect x="9" y="9" width="6" height="6"/></svg>
                     {costStr}
                   </span>
                 )}
                 {ctxStr && (
-                  <span style={{ display: "flex", alignItems: "center", gap: 4, color: ctxColor }}>
-                    <svg width="12" height="12" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.2" strokeLinecap="round" strokeLinejoin="round">
+                  <span style={{ display: "flex", alignItems: "center", gap: 4, padding: "2px 8px", background: "rgb(251 191 36 / 0.08)", borderRadius: 6, color: ctxColor }}>
+                    <svg width="11" height="11" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round">
                       <path d="M1 9 L1 5 Q1 1 5 1 Q9 1 9 5 L9 9" /><line x1="1" y1="9" x2="9" y2="9" />
                     </svg>
                     {ctxStr}
@@ -635,10 +626,10 @@ export function AppShell() {
         width: 36, height: 36, padding: 0,
         background: "var(--bg-panel)", border: "none", borderLeft: "1px solid var(--border)", borderBottom: "1px solid var(--border)",
         color: rightPanelOpen ? "var(--text)" : "var(--text-muted)",
-        cursor: "pointer", transition: "color 0.12s",
+        cursor: "pointer", transition: "background 0.12s, color 0.12s",
       }}
-      onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
-      onMouseLeave={(e) => { e.currentTarget.style.color = rightPanelOpen ? "var(--text)" : "var(--text-muted)"; }}
+      onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text)"; }}
+      onMouseLeave={(e) => { e.currentTarget.style.background = "var(--bg-panel)"; e.currentTarget.style.color = rightPanelOpen ? "var(--text)" : "var(--text-muted)"; }}
     >
       <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         <rect x="3" y="3" width="18" height="18" rx="2" /><line x1="15" y1="3" x2="15" y2="21" />

@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useRef, useState, useMemo } from "react";
 import type { AgentMessage, SessionInfo, SessionTreeNode } from "@/lib/types";
 import { MessageView } from "./MessageView";
 import { ChatInput, type ChatInputHandle } from "./ChatInput";
@@ -154,8 +154,27 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
 
   const { isDragOver, handleDragEnter, handleDragOver, handleDragLeave, handleDrop } = useDragDrop(onDrop);
 
-  const visibleMessages = messages.filter((m) => m.role === "user" || m.role === "assistant");
+  const visibleMessages = useMemo(() => messages.filter((m) => m.role === "user" || m.role === "assistant"), [messages]);
   const messageRefs = useMessageRefs(visibleMessages.length);
+
+  // Memoize toolResults map so it's not rebuilt on every render
+  const toolResultsMap = useMemo(() => {
+    const map = new Map<string, import("@/lib/types").ToolResultMessage>();
+    for (const msg of messages) {
+      if (msg.role === "toolResult") {
+        map.set((msg as import("@/lib/types").ToolResultMessage).toolCallId, msg as import("@/lib/types").ToolResultMessage);
+      }
+    }
+    return map;
+  }, [messages]);
+
+  // Memoize last user message index
+  const lastUserIdx = useMemo(() => {
+    for (let i = messages.length - 1; i >= 0; i--) {
+      if (messages[i].role === "user") return i;
+    }
+    return -1;
+  }, [messages]);
 
   const isEmptyNew = isNew && messages.length === 0 && !streamState.isStreaming && !agentRunning;
 
@@ -292,16 +311,6 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
           <div className="mx-auto max-w-[820px] px-4">
 
             {(() => {
-              const toolResultsMap = new Map<string, import("@/lib/types").ToolResultMessage>();
-              for (const msg of messages) {
-                if (msg.role === "toolResult") {
-                  toolResultsMap.set((msg as import("@/lib/types").ToolResultMessage).toolCallId, msg as import("@/lib/types").ToolResultMessage);
-                }
-              }
-              let lastUserIdx = -1;
-              for (let i = messages.length - 1; i >= 0; i--) {
-                if (messages[i].role === "user") { lastUserIdx = i; break; }
-              }
               let refIdx = 0;
               return messages.map((msg, idx) => {
                 const prevAssistantEntryId =
@@ -334,7 +343,7 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
                     forking={forkingEntryId === entryIds[idx]}
                     onNavigate={agentRunning ? undefined : handleNavigate}
                     prevAssistantEntryId={agentRunning ? undefined : prevAssistantEntryId}
-                    onEditContent={(content) => chatInputRef?.current?.insertIfEmpty(content)}
+                    onEditContent={(content: string) => chatInputRef?.current?.insertIfEmpty(content)}
                     showTimestamp={showTimestamp}
                     prevTimestamp={idx > 0 ? (messages[idx - 1] as import("@/lib/types").AgentMessage & { timestamp?: number }).timestamp : undefined}
                   />

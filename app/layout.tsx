@@ -1,11 +1,19 @@
 import type { Metadata } from "next";
-import { Noto_Sans_Mono } from "next/font/google";
+import { JetBrains_Mono, Fira_Code } from "next/font/google";
 import "./globals.css";
 
-const notoSansMono = Noto_Sans_Mono({
-  subsets: ["latin", "cyrillic"],
-  variable: "--font-noto-mono",
+const jbMono = JetBrains_Mono({
+  subsets: ["latin"],
+  variable: "--font-mono-ui",
   display: "swap",
+  weight: ["400", "500", "600", "700"],
+});
+
+const firaCode = Fira_Code({
+  subsets: ["latin"],
+  variable: "--font-code",
+  display: "swap",
+  weight: ["400", "500", "600"],
 });
 
 export const metadata: Metadata = {
@@ -19,7 +27,7 @@ export default function RootLayout({
   children: React.ReactNode;
 }) {
   return (
-    <html lang="en" className={notoSansMono.variable} suppressHydrationWarning>
+    <html lang="en" className={`${jbMono.variable} ${firaCode.variable}`} suppressHydrationWarning>
       <head>
         <script
           dangerouslySetInnerHTML={{

@@ -15,41 +15,55 @@
   --color-assistant-bg: var(--assistant-bg);
   --color-tool-bg: var(--tool-bg);
   --color-bg-subtle: var(--bg-subtle);
+  --color-teal: var(--teal);
+  --color-success: var(--success);
+  --color-error: var(--error);
+  --color-warning: var(--warning);
   --font-mono-font: var(--font-mono);
 }
 
 :root {
   --bg: #ffffff;
-  --bg-panel: #f5f5f5;
+  --bg-panel: #f6f6f6;
   --bg-hover: #eeeeee;
-  --bg-selected: #e8e8e8;
-  --border: #e0e0e0;
-  --text: #1a1a1a;
-  --text-muted: #6b7280;
-  --text-dim: #9ca3af;
-  --accent: #2563eb;
-  --accent-hover: #1d4ed8;
-  --user-bg: #eff6ff;
+  --bg-selected: #e5e5e5;
+  --border: #e8e8e8;
+  --text: #111111;
+  --text-muted: #6b6b6b;
+  --text-dim: #9e9e9e;
+  --accent: #4a6cf7;
+  --accent-hover: #6b8cff;
+  --accent-text: #ffffff;
+  --user-bg: #f0f2ff;
   --assistant-bg: #ffffff;
-  --tool-bg: #f9fafb;
+  --tool-bg: rgba(13,148,136,0.04);
   --bg-subtle: rgba(0,0,0,0.03);
+  --teal: #0d9488;
+  --success: #16a34a;
+  --error: #dc2626;
+  --warning: #d97706;
 }
 
 html.dark {
-  --bg: #1a1a1a;
-  --bg-panel: #242424;
-  --bg-hover: #2e2e2e;
-  --bg-selected: #383838;
-  --border: #3a3a3a;
-  --text: #e8e8e8;
-  --text-muted: #9ca3af;
-  --text-dim: #6b7280;
-  --accent: #60a5fa;
-  --accent-hover: #93c5fd;
-  --user-bg: #1e293b;
-  --assistant-bg: #1a1a1a;
-  --tool-bg: #1f2937;
-  --bg-subtle: rgba(255,255,255,0.04);
+  --bg: #08080a;
+  --bg-panel: #111113;
+  --bg-hover: #19191d;
+  --bg-selected: #202024;
+  --border: #1d1d21;
+  --text: #e4e4e4;
+  --text-muted: #787878;
+  --text-dim: #484848;
+  --accent: #6b8cff;
+  --accent-hover: #8ba6ff;
+  --accent-text: #ffffff;
+  --user-bg: #14151f;
+  --assistant-bg: #08080a;
+  --tool-bg: rgba(45,212,191,0.04);
+  --bg-subtle: rgba(255,255,255,0.035);
+  --teal: #2dd4bf;
+  --success: #4ade80;
+  --error: #f87171;
+  --warning: #fbbf24;
 }
 
 /* Theme toggle: circular wipe via View Transitions API.
@@ -77,7 +91,7 @@ html, body {
   padding: 0;
   background: var(--bg);
   color: var(--text);
-  font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', Roboto, sans-serif;
+  font-family: var(--font-mono);
   font-size: 14px;
   overscroll-behavior: none;
 }
@@ -102,11 +116,12 @@ body {
 }
 
 :root {
-  --font-mono: var(--font-noto-mono), 'JetBrains Mono', 'Fira Code', 'Consolas', ui-monospace, 'PingFang SC', 'Microsoft YaHei', monospace;
+  --font-mono: var(--font-mono-ui), 'JetBrains Mono', 'SF Mono', 'Fira Code', ui-monospace, monospace;
 }
 
 pre, code {
-  font-family: var(--font-mono);
+  font-family: var(--font-code), 'Fira Code', var(--font-mono);
+  font-variant-ligatures: contextual;
 }
 
 /* react-markdown output styles */
@@ -192,29 +207,9 @@ span.linenumber {
   to   { opacity: 1; transform: scale(1); }
 }
 
-@keyframes drop-icon-float {
-  0%, 100% { transform: translateY(0px); }
-  50%       { transform: translateY(-6px); }
-}
-
-@keyframes drop-ring-pulse {
-  0%, 100% { opacity: 0.5; transform: scale(1); }
-  50%       { opacity: 1;   transform: scale(1.06); }
-}
-
 @keyframes drop-ripple {
   0%   { transform: scale(0); opacity: 0.6; }
   100% { transform: scale(1); opacity: 0; }
-}
-
-@keyframes blink {
-  0%, 100% { opacity: 1; }
-  50% { opacity: 0.3; }
-}
-
-@keyframes spin {
-  from { transform: rotate(0deg); }
-  to { transform: rotate(360deg); }
 }
 
 @keyframes pulse {
@@ -231,6 +226,11 @@ span.linenumber {
 @keyframes saved-check-draw {
   from { stroke-dashoffset: 18; opacity: 0; }
   to   { stroke-dashoffset: 0;  opacity: 1; }
+}
+
+@keyframes spin {
+  from { transform: rotate(0deg); }
+  to   { transform: rotate(360deg); }
 }
 
 /* Desktop sidebar: animate width */

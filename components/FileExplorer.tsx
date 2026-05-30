@@ -118,18 +118,33 @@ function TreeNode({
           gap: 4,
           paddingLeft: 8 + depth * 14,
           paddingRight: 8,
-          height: 24,
+          height: 26,
           cursor: "pointer",
           background: hovered ? "var(--bg-hover)" : "transparent",
-          borderRadius: 4,
+          borderRadius: 6,
           userSelect: "none",
+          transition: "background 0.12s, transform 0.12s",
+          margin: "0 2px",
+          borderLeft: hovered && !node.isDir ? "2px solid var(--accent)" : "2px solid transparent",
         }}
       >
+        {/* Indent guide line */}
+        {depth > 0 && (
+          <div style={{
+            position: "absolute",
+            left: 8 + (depth - 1) * 14 + 5,
+            top: 0, bottom: 0,
+            width: 1,
+            background: "var(--border)",
+            pointerEvents: "none",
+            opacity: 0.5,
+          }} />
+        )}
         {node.isDir && (
           <svg
             width="10" height="10" viewBox="0 0 10 10" fill="none"
             stroke="var(--text-dim)" strokeWidth="1.8" strokeLinecap="round" strokeLinejoin="round"
-            style={{ flexShrink: 0, transform: open ? "rotate(90deg)" : "none", transition: "transform 0.1s" }}
+            style={{ flexShrink: 0, transform: open ? "rotate(90deg)" : "none", transition: "transform 0.12s" }}
           >
             <polyline points="3 2 7 5 3 8" />
           </svg>
@@ -172,23 +187,26 @@ function TreeNode({
               alignItems: "center",
               justifyContent: "center",
               gap: 4,
-              padding: "0 8px",
-              height: 20,
+              padding: "0 6px",
+              height: 18,
               background: "var(--bg-panel)",
               border: "1px solid var(--border)",
               borderRadius: 4,
               color: "var(--accent)",
               cursor: "pointer",
-              fontSize: 11,
-              fontWeight: 600,
+              fontSize: 10,
+              fontWeight: 500,
               whiteSpace: "nowrap",
+              transition: "background 0.12s, border-color 0.12s",
             }}
+            onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.borderColor = "var(--accent)"; }}
+            onMouseLeave={(e) => { e.currentTarget.style.background = "var(--bg-panel)"; e.currentTarget.style.borderColor = "var(--border)"; }}
           >
-            <svg width="11" height="11" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
+            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2.2" strokeLinecap="round" strokeLinejoin="round">
               <circle cx="12" cy="12" r="4" />
               <path d="M16 8v5a3 3 0 0 0 6 0v-1a10 10 0 1 0-4 8" />
             </svg>
-            mention
+            @
           </button>
         )}
       </div>
