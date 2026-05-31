@@ -1,5 +1,5 @@
 {
-  "name": "@agegr/pi-web",
+  "name": "pi-web",
   "version": "0.6.12",
   "description": "Web UI for the pi coding agent",
   "license": "MIT",
@@ -19,10 +19,10 @@
   "scripts": {
     "dev": "NODE_ENV=development next dev -p 30141",
     "build": "next build --webpack",
-    "start": "next start -p 30141",
+    "start": "next start -p 3030",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "release": "npm version patch --no-git-tag-version && npm run build && npm publish --access public"
+    "release": "npm version patch --no-git-tag-version && npm run build && npm publish"
   },
   "dependencies": {
     "@earendil-works/pi-ai": "^0.75.5",
