@@ -617,7 +617,8 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       } else if (!initialScrollDoneRef.current) {
         initialScrollDoneRef.current = true;
         scrollToBottom("instant");
-      } else {
+      } else if (!agentRunningRef.current) {
+        // Agent finished — smooth scroll to show complete response
         scrollToBottom("smooth");
       }
     }
