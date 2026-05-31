@@ -1,5 +1,5 @@
 {
-  "name": "pi-web",
+  "name": "@npm-liqingfeng/pi-web",
   "version": "0.6.12",
   "description": "Web UI for the pi coding agent",
   "license": "MIT",
@@ -17,12 +17,12 @@
     "package.json"
   ],
   "scripts": {
-    "dev": "NODE_ENV=development next dev -p 30141",
+    "dev": "NODE_ENV=development next dev -p 13030",
     "build": "next build --webpack",
-    "start": "next start -p 3030",
+    "start": "next start -p 13030",
     "lint": "eslint .",
     "typecheck": "tsc --noEmit",
-    "release": "npm version patch --no-git-tag-version && npm run build && npm publish"
+    "release": "npm version patch --no-git-tag-version && npm run build && npm publish --access public"
   },
   "dependencies": {
     "@earendil-works/pi-ai": "^0.75.5",

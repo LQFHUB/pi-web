@@ -72,7 +72,6 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
   const [nodes, setNodes] = useState<NodeInfo[]>([]);
   const [minimapHovered, setMinimapHovered] = useState(false);
   const [pinned, setPinned] = useState(false);
-  const [panelVisible, setPanelVisible] = useState(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mouseYRatio, setMouseYRatio] = useState<number | null>(null);
   const draggingRef = useRef(false);
@@ -246,7 +245,7 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
 
 
   const clearHideTimer = () => { if (hideTimerRef.current) { clearTimeout(hideTimerRef.current); hideTimerRef.current = null; } };
-  const startHideTimer = () => { hideTimerRef.current = setTimeout(() => setMinimapHovered(false), 600); };
+  const startHideTimer = () => { setMinimapHovered(false); };
 
   return (
     <div
@@ -255,9 +254,8 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
         flexShrink: 0,
         position: "relative",
         display: "flex",
-        flexDirection: pinned ? "row" : "column",
-        alignItems: pinned ? "flex-start" : "center",
-        justifyContent: "center",
+        flexDirection: "row",
+        alignItems: "flex-start",
         userSelect: "none",
         borderLeft: "1px solid var(--border)",
         background: pinned ? "var(--bg)" : "var(--bg-panel)",
@@ -265,17 +263,19 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
         overflow: "hidden",
       }}
     >
-      {/* History panel — visible when pinned, fills remaining width */}
-      {panelVisible && userMessages.length > 0 && (
-        <div style={{
-          flex: 1,
-          alignSelf: "stretch",
+      {/* History panel — fills remaining width when visible, collapses to 0 width */}
+      <div style={{
+        flex: pinned ? 1 : 0,
+        alignSelf: pinned ? "stretch" : "auto",
+        overflow: "hidden",
+        opacity: pinned ? 1 : 0,
+        transition: "flex 0.25s ease, opacity 0.15s ease",
+      }}>
+        {userMessages.length > 0 && <div style={{
+          height: "100%",
           display: "flex",
           flexDirection: "column",
-          borderRight: "1px solid var(--accent)",
-          overflow: "hidden",
-          opacity: pinned ? 1 : 0,
-          transition: "opacity 0.2s ease",
+          borderRight: pinned ? "1px solid var(--accent)" : "none",
         }}>
           {/* Header */}
           <div style={{
@@ -340,8 +340,8 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
               );
             })}
           </div>
-        </div>
-      )}
+        </div>}
+      </div>
 
       {/* Trigger handle — always visible, on the right edge */}
       <div
@@ -350,13 +350,7 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
         onMouseLeave={() => { if (!pinned) startHideTimer(); }}
         onClick={() => {
           if (userMessages.length > 0) {
-            if (pinned) {
-              setPinned(false);
-              setTimeout(() => setPanelVisible(false), 300);
-            } else {
-              setPanelVisible(true);
-              setPinned(true);
-            }
+            setPinned(v => !v);
           }
         }}
         style={{
@@ -367,7 +361,7 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
           gap: 5,
           width: MINIMAP_WIDTH,
           flexShrink: 0,
-          alignSelf: pinned ? "center" : "auto",
+          alignSelf: "center",
           height: 100,
           minHeight: 100,
           borderRadius: pinned ? "12px 0 0 12px" : 12,

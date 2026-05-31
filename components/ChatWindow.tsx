@@ -304,9 +304,9 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
           </div>
         </div>
       ) : (
-      <>
       <div className="relative flex flex-1 overflow-hidden">
-        <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pt-4 [scrollbar-width:none]">
+        <div style={{ flex: 1, display: "flex", flexDirection: "column", overflow: "hidden", minWidth: 0 }}>
+          <div ref={scrollContainerRef} className="flex-1 overflow-y-auto pt-4 [scrollbar-width:none]">
           <div className="mx-auto max-w-[820px] px-4">
 
             {(() => {
@@ -411,6 +411,10 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
             <div ref={messagesEndRef} />
           </div>
         </div>
+        <div className="relative" style={{ flexShrink: 0 }}>
+            {chatInputElement}
+          </div>
+        </div>
         <ChatMinimap
           messages={messages}
           streamingMessage={streamState.streamingMessage}
@@ -419,11 +423,6 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
           onHighlight={(idx) => { setHighlightedMsgIndex(idx); setTimeout(() => setHighlightedMsgIndex(null), 2200); }}
         />
       </div>
-
-      <div className="relative">
-        {chatInputElement}
-      </div>
-      </>
       )}
     </div>
   );
