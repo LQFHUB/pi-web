@@ -66,7 +66,12 @@ child.stdout.on("data", (chunk) => {
     const isWindows = process.platform === "win32";
     const isMac = process.platform === "darwin";
     const openCmd = isWindows ? "start" : isMac ? "open" : "xdg-open";
-    spawn(openCmd, [url], { shell: isWindows, stdio: "ignore", detached: true }).unref();
+    try {
+      const child = spawn(openCmd, [url], { shell: isWindows, stdio: "ignore", detached: true });
+      child.unref();
+    } catch {
+      // No browser available (headless server)
+    }
   }
 });
 

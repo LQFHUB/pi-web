@@ -1,0 +1,7 @@
+# This file overrides .gitignore for npm packaging.
+# By being empty (or listing only what to ignore), 
+# the .next directory will be included in the npm package.
+# We want ALL files included, so just ignore dev-only stuff
+next-env.d.ts
+.git
+.gitignore
