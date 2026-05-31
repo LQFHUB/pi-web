@@ -22,6 +22,7 @@ import type {
 interface Props {
   message: AgentMessage;
   isStreaming?: boolean;
+  highlighted?: boolean;
   toolResults?: Map<string, ToolResultMessage>;
   modelNames?: Record<string, string>;
   entryId?: string;
@@ -66,9 +67,9 @@ function copyText(text: string): Promise<void> {
   }
 }
 
-export const MessageView = memo(function MessageView({ message, isStreaming, toolResults, modelNames, entryId, onFork, forking, onNavigate, prevAssistantEntryId, onEditContent, showTimestamp, prevTimestamp }: Props) {
+export const MessageView = memo(function MessageView({ message, isStreaming, highlighted, toolResults, modelNames, entryId, onFork, forking, onNavigate, prevAssistantEntryId, onEditContent, showTimestamp, prevTimestamp }: Props) {
   if (message.role === "user") {
-    return <UserMessageView message={message as UserMessage} entryId={entryId} onFork={onFork} forking={forking} onNavigate={onNavigate} prevAssistantEntryId={prevAssistantEntryId} onEditContent={onEditContent} />;
+    return <UserMessageView message={message as UserMessage} entryId={entryId} onFork={onFork} forking={forking} onNavigate={onNavigate} prevAssistantEntryId={prevAssistantEntryId} onEditContent={onEditContent} highlighted={highlighted} />;
   }
   if (message.role === "assistant") {
     return <AssistantMessageView message={message as AssistantMessage} isStreaming={isStreaming} toolResults={toolResults} modelNames={modelNames} showTimestamp={showTimestamp} prevTimestamp={prevTimestamp} />;
@@ -80,7 +81,7 @@ export const MessageView = memo(function MessageView({ message, isStreaming, too
   return null;
 });
 
-function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAssistantEntryId, onEditContent }: {
+function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAssistantEntryId, onEditContent, highlighted }: {
   message: UserMessage;
   entryId?: string;
   onFork?: (entryId: string) => void;
@@ -88,6 +89,7 @@ function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAs
   onNavigate?: (entryId: string) => void;
   prevAssistantEntryId?: string;
   onEditContent?: (content: string) => void;
+  highlighted?: boolean;
 }) {
   const [hovered, setHovered] = useState(false);
   const [copied, setCopied] = useState(false);
@@ -124,6 +126,7 @@ function UserMessageView({ message, entryId, onFork, forking, onNavigate, prevAs
     >
       <div style={{ display: "flex", alignItems: "flex-end", gap: 6, maxWidth: "85%" }}>
         <div
+          className={highlighted ? "msg-highlight" : undefined}
           style={{
             flex: 1,
             minWidth: 0,
@@ -401,32 +404,58 @@ function AssistantMessageView({
 
   return (
     <div
-      style={{ marginBottom: 16 }}
-      onMouseEnter={() => setHovered(true)}
-      onMouseLeave={() => setHovered(false)}
+      style={{
+        marginBottom: 16,
+        borderRadius: 10,
+        border: "1px solid var(--border)",
+        background: "var(--bg)",
+        overflow: "hidden",
+        transition: "border-color 0.2s, box-shadow 0.2s",
+        animation: isStreaming ? "none" : "panelEnter 0.35s cubic-bezier(0.16, 1, 0.3, 1) both",
+      }}
+      onMouseEnter={(e) => {
+        setHovered(true);
+        e.currentTarget.style.borderColor = "rgba(107,140,255,0.15)";
+        e.currentTarget.style.boxShadow = "0 2px 12px rgba(0,0,0,0.04)";
+      }}
+      onMouseLeave={(e) => {
+        setHovered(false);
+        e.currentTarget.style.borderColor = "var(--border)";
+        e.currentTarget.style.boxShadow = "none";
+      }}
     >
-      {/* Model label */}
+      {/* Gradient accent top line */}
+      <div style={{
+        height: 3,
+        background: "linear-gradient(90deg, var(--accent), var(--teal), transparent)",
+        opacity: 0.5,
+      }} />
+
+      {/* Model header */}
       <div
         style={{
-          fontSize: 11,
-          color: "var(--text-dim)",
-          marginBottom: 6,
           display: "flex",
           alignItems: "center",
           gap: 8,
+          padding: "6px 14px",
+          background: "transparent",
+          borderBottom: "none",
+          fontSize: 11,
+          color: "var(--text-dim)",
         }}
       >
         <div style={{
           width: 18, height: 18, borderRadius: 5,
-          background: "var(--accent)", display: "flex", alignItems: "center", justifyContent: "center",
-          color: "var(--accent-text)", fontSize: 9, fontWeight: 700, flexShrink: 0,
+          background: "linear-gradient(135deg, var(--accent), var(--teal))",
+          display: "flex", alignItems: "center", justifyContent: "center",
+          color: "#fff", fontSize: 9, fontWeight: 700, flexShrink: 0,
           transition: "transform 0.15s",
         }}
           onMouseEnter={(e) => { e.currentTarget.style.transform = "scale(1.15) rotate(-5deg)"; }}
           onMouseLeave={(e) => { e.currentTarget.style.transform = "none"; }}
         >{message.model?.charAt(0).toUpperCase() ?? "A"}</div>
         {message.provider && (
-          <span style={{ fontWeight: 600, color: "var(--accent)" }}>{modelNames?.[`${message.provider}:${message.model}`] ?? modelNames?.[message.model] ?? message.model}</span>
+          <span style={{ fontWeight: 500, color: "var(--text-muted)" }}>{modelNames?.[`${message.provider}:${message.model}`] ?? modelNames?.[message.model] ?? message.model}</span>
         )}
         {isStreaming && (() => {
           let chars = 0;
@@ -462,18 +491,52 @@ function AssistantMessageView({
         })()}
       </div>
 
-      <div style={{ display: "flex", flexDirection: "column", gap: 8 }}>
+      <div style={{ display: "flex", flexDirection: "column", gap: 8, padding: "0 14px" }}>
         {blocks.map((block, i) => (
           <BlockView key={i} block={block} toolResults={toolResults} isStreaming={isStreaming} streamingDuration={streamingDurations.get(i) ?? (block.type === "thinking" ? thinkingDurationFromFile : undefined)} toolCallDurations={toolCallDurations} />
         ))}
       </div>
 
       <div style={{
-        display: "flex", alignItems: "center", gap: 8, marginTop: 4,
+        display: "flex", alignItems: "center", gap: 8, marginTop: 4, padding: "0 14px 8px",
       }}>
         {message.usage && !isStreaming && (
-          <div style={{ fontSize: 11, color: "var(--text-dim)" }}>
-            {formatUsage(message.usage)}
+          <div style={{ display: "flex", alignItems: "center", gap: 4, fontSize: 10, color: "var(--text-muted)", fontVariantNumeric: "tabular-nums" }}>
+            {message.usage.input > 0 && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 6px", background: "var(--bg-subtle)", borderRadius: 4, height: 18, transition: "background 0.12s" }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg-subtle)"}
+              >
+                <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="var(--teal)" strokeWidth="1.4" strokeLinecap="round"><line x1="5" y1="8.5" x2="5" y2="1.5" /><polyline points="2 4 5 1.5 8 4" /></svg>
+                {message.usage.input.toLocaleString()}
+              </span>
+            )}
+            {message.usage.output > 0 && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 6px", background: "var(--bg-subtle)", borderRadius: 4, height: 18, transition: "background 0.12s" }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg-subtle)"}
+              >
+                <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="currentColor" strokeWidth="1.4" strokeLinecap="round"><line x1="5" y1="1.5" x2="5" y2="8.5" /><polyline points="2 6 5 8.5 8 6" /></svg>
+                {message.usage.output.toLocaleString()}
+              </span>
+            )}
+            {message.usage.cacheRead > 0 && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 6px", background: "var(--bg-subtle)", borderRadius: 4, height: 18, transition: "background 0.12s" }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg-subtle)"}
+              >
+                <svg width="8" height="8" viewBox="0 0 10 10" fill="none" stroke="var(--text-muted)" strokeWidth="1.4" strokeLinecap="round"><path d="M8.5 5a3.5 3.5 0 1 1-1-2.45" /><polyline points="6.5 1.5 8.5 2.5 7.5 4.5" /></svg>
+                {message.usage.cacheRead.toLocaleString()}
+              </span>
+            )}
+            {message.usage.cost?.total > 0 && (
+              <span style={{ display: "inline-flex", alignItems: "center", gap: 3, padding: "1px 6px", background: "var(--bg-subtle)", borderRadius: 4, height: 18, color: "var(--accent)", fontWeight: 500, transition: "background 0.12s" }}
+                onMouseEnter={(e) => e.currentTarget.style.background = "var(--bg-hover)"}
+                onMouseLeave={(e) => e.currentTarget.style.background = "var(--bg-subtle)"}
+              >
+                ${message.usage.cost.total.toFixed(4)}
+              </span>
+            )}
           </div>
         )}
         {textContent && !isStreaming && (
@@ -866,7 +929,7 @@ function CodeBlock({ code, lang }: { code: string; lang: string }) {
             <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/>
             <polyline points="14 2 14 8 20 8"/>
           </svg>
-          <span>{lang || "code"}</span>
+          <span style={{ padding: "1px 6px", background: "var(--bg-subtle)", borderRadius: 4, color: "var(--accent)", fontWeight: 500 }}>{lang || "code"}</span>
         </div>
         <button
           onClick={copy}

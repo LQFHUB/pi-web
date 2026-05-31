@@ -100,10 +100,16 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
         style={{
           display: "flex",
           alignItems: "center",
-          height: 24,
+          height: 26,
           cursor: "pointer",
+          borderRadius: 6,
+          transition: "background 0.12s",
+          background: isActive ? "var(--bg-selected)" : "transparent",
+          borderLeft: isActive ? "2px solid var(--accent)" : "2px solid transparent",
         }}
         onClick={() => onSelect(rep.entry.id)}
+        onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; }}
+        onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
       >
         {/* Indent guide lines */}
         {parentLines.map((hasLine, i) => (
@@ -161,13 +167,14 @@ function TreeNodeView({ node, activePathIds, depth, isLast, parentLines, onSelec
             fontSize: 9,
             fontFamily: "var(--font-mono)",
             color: role === "user" ? "var(--accent)" : "var(--text-dim)",
-            background: role === "user" ? "rgba(107,140,255,0.08)" : "var(--bg-hover)",
-            border: `1px solid ${role === "user" ? "rgba(107,140,255,0.2)" : "var(--border)"}`,
-            borderRadius: 3,
-            padding: "0 4px",
+            background: role === "user" ? "rgba(107,140,255,0.08)" : "transparent",
+            border: `1px solid ${role === "user" ? "rgba(107,140,255,0.25)" : "var(--border)"}`,
+            borderRadius: 4,
+            padding: "0 5px",
             marginRight: 5,
             flexShrink: 0,
             lineHeight: "16px",
+            fontWeight: 500,
           }}>
             {role === "user" ? "U" : "A"}
           </span>
@@ -289,8 +296,8 @@ export function BranchNavigator({ tree, activeLeafId, onLeafChange, inline, cont
             whiteSpace: "nowrap",
             transition: "color 0.1s, background 0.1s",
           }}
-          onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
-          onMouseLeave={(e) => { e.currentTarget.style.color = open ? "var(--text)" : "var(--text-muted)"; }}
+          onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text)"; }}
+          onMouseLeave={(e) => { e.currentTarget.style.background = open ? "var(--bg-selected)" : "none"; e.currentTarget.style.color = open ? "var(--text)" : "var(--text-muted)"; }}
         >
           {branchIcon}
           <span>Branches</span>

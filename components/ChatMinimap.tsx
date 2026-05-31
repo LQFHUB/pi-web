@@ -8,6 +8,7 @@ interface Props {
   streamingMessage: Partial<AgentMessage> | null;
   scrollContainer: RefObject<HTMLDivElement | null>;
   messageRefs: RefObject<(HTMLDivElement | null)[]>;
+  onHighlight: (allMsgIndex: number) => void;
 }
 
 const MINIMAP_WIDTH = 36;
@@ -64,12 +65,15 @@ interface NodeInfo {
   index: number;
 }
 
-export function ChatMinimap({ messages, streamingMessage, scrollContainer, messageRefs }: Props) {
+export function ChatMinimap({ messages, streamingMessage, scrollContainer, messageRefs, onHighlight }: Props) {
   const [scrollRatio, setScrollRatio] = useState(0);
   const [viewportRatio, setViewportRatio] = useState(1);
   const [visible, setVisible] = useState(false);
   const [nodes, setNodes] = useState<NodeInfo[]>([]);
   const [minimapHovered, setMinimapHovered] = useState(false);
+  const [pinned, setPinned] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(false);
+  const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mouseYRatio, setMouseYRatio] = useState<number | null>(null);
   const draggingRef = useRef(false);
   const containerRef = useRef<HTMLDivElement>(null);
@@ -87,7 +91,42 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
   const allMessagesRef = useRef(allMessages);
   allMessagesRef.current = allMessages;
 
+  // Mapping: allMsgIndex → refIdx (messageRefs uses refIdx, not allMsgIndex)
+  const msgIndexToRefIdx = useMemo(() => {
+    const map = new Map<number, number>();
+    let r = 0;
+    allMessages.forEach((msg, i) => {
+      if (msg.role === "user" || msg.role === "assistant") {
+        map.set(i, r++);
+      }
+    });
+    return map;
+  }, [allMessages]);
+
+  // Extract user messages for history panel display
+  const userMessages = useMemo(() => {
+    return allMessages
+      .map((m, i) => ({ msg: m, allMsgIndex: i }))
+      .filter(item => item.msg.role === "user");
+  }, [allMessages]);
+
   const updatePositionsRef = useRef<() => void>(null!);
+
+  // Jump to a specific user message position — precise top alignment
+  const jumpToMessage = useCallback((allMsgIndex: number) => {
+    const el = scrollContainer.current;
+    if (!el) return;
+    const refIdx = msgIndexToRefIdx.get(allMsgIndex);
+    const refs = messageRefs.current;
+    if (refIdx !== undefined && refs && refs[refIdx]) {
+      const target = refs[refIdx]!;
+      const delta = target.getBoundingClientRect().top - el.getBoundingClientRect().top;
+      el.scrollTo({ top: el.scrollTop + delta, behavior: "smooth" });
+    } else {
+      const estimatedTop = (allMsgIndex / allMessages.length) * (el.scrollHeight - el.clientHeight);
+      el.scrollTo({ top: estimatedTop, behavior: "smooth" });
+    }
+  }, [scrollContainer, messageRefs, allMessages.length, msgIndexToRefIdx]);
   updatePositionsRef.current = () => {
     const scrollEl = scrollContainer.current;
     if (!scrollEl) return;
@@ -105,32 +144,42 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
       setViewportRatio(clientH / totalH);
     }
 
-    // Build node positions from real DOM refs
+    // Build node positions — only user messages
     const refs = messageRefs.current;
     const newNodes: NodeInfo[] = [];
     let refIndex = 0;
 
     const allMessages = allMessagesRef.current;
+    const userMsgCount = allMessages.filter(m => m.role === "user").length;
     for (let i = 0; i < allMessages.length; i++) {
       const msg = allMessages[i];
-      if (msg.role !== "user" && msg.role !== "assistant") continue;
+      // Track refIndex for ALL rendered messages to keep alignment
+      if (msg.role === "user" || msg.role === "assistant") {
+        const el = refs?.[refIndex];
+        refIndex++;
+        if (msg.role !== "user") continue;
 
-      const el = refs?.[refIndex];
-      refIndex++;
-
-      if (!hasTextContent(msg)) continue;
-
-      if (el && totalH > 0) {
-        const elRect = el.getBoundingClientRect();
-        const containerRect = scrollEl.getBoundingClientRect();
-        const top = elRect.top - containerRect.top + scrollEl.scrollTop;
-        const h = elRect.height;
-        newNodes.push({
-          topRatio: top / totalH,
-          heightRatio: h / totalH,
-          msg,
-          index: newNodes.length,
-        });
+        if (el && totalH > 0) {
+          const elRect = el.getBoundingClientRect();
+          const containerRect = scrollEl.getBoundingClientRect();
+          const top = elRect.top - containerRect.top + scrollEl.scrollTop;
+          const h = elRect.height;
+          newNodes.push({
+            topRatio: top / totalH,
+            heightRatio: h / totalH,
+            msg,
+            index: newNodes.length,
+          });
+        } else {
+          // No DOM ref, add with placeholder position
+          const ratio = newNodes.length / Math.max(userMsgCount, 1);
+          newNodes.push({
+            topRatio: ratio,
+            heightRatio: 0.01,
+            msg,
+            index: newNodes.length,
+          });
+        }
       }
     }
     setNodes(newNodes);
@@ -196,186 +245,189 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
 
 
 
-  // Compute collision-free tooltip positions for all nodes
-  const TOOLTIP_HEIGHT = 22;
-  const TOOLTIP_GAP = 2;
-  const minimapHeightPx = containerRef.current?.clientHeight ?? 600;
-
-  const tooltipPositions = useMemo(() => {
-    if (!minimapHovered || nodes.length === 0) return [];
-    // Initial positions: centered on the dot
-    const positions = nodes.map((node) =>
-      Math.round(node.topRatio * minimapHeightPx - TOOLTIP_HEIGHT / 2)
-    );
-    // Iterative push-apart to resolve overlaps (top-to-bottom pass, then bottom-to-top)
-    for (let pass = 0; pass < 10; pass++) {
-      for (let i = 1; i < positions.length; i++) {
-        const minTop = positions[i - 1] + TOOLTIP_HEIGHT + TOOLTIP_GAP;
-        if (positions[i] < minTop) positions[i] = minTop;
-      }
-      for (let i = positions.length - 2; i >= 0; i--) {
-        const maxTop = positions[i + 1] - TOOLTIP_HEIGHT - TOOLTIP_GAP;
-        if (positions[i] > maxTop) positions[i] = maxTop;
-      }
-    }
-    // Clamp all to minimap bounds
-    for (let i = 0; i < positions.length; i++) {
-      positions[i] = Math.max(0, Math.min(minimapHeightPx - TOOLTIP_HEIGHT, positions[i]));
-    }
-    return positions;
-  }, [minimapHovered, nodes, minimapHeightPx]);
-
-  if (!visible) return null;
-
-  const viewportBoxTop = scrollRatio * (1 - viewportRatio) * 100;
-  const viewportBoxHeight = viewportRatio * 100;
-
-  // Find the node closest to the current mouse position
-  const nearestIndex = mouseYRatio !== null && nodes.length > 0
-    ? nodes.reduce((best, node) => {
-        return Math.abs(node.topRatio - mouseYRatio) < Math.abs(nodes[best].topRatio - mouseYRatio) ? node.index : best;
-      }, 0)
-    : null;
+  const clearHideTimer = () => { if (hideTimerRef.current) { clearTimeout(hideTimerRef.current); hideTimerRef.current = null; } };
+  const startHideTimer = () => { hideTimerRef.current = setTimeout(() => setMinimapHovered(false), 600); };
 
   return (
     <div
-      ref={containerRef}
-      onMouseDown={handleMouseDown}
-      onWheel={handleWheel}
-      onMouseEnter={() => setMinimapHovered(true)}
-      onMouseLeave={() => { setMinimapHovered(false); setMouseYRatio(null); }}
-      onMouseMove={(e) => {
-        const rect = e.currentTarget.getBoundingClientRect();
-        setMouseYRatio((e.clientY - rect.top) / rect.height);
-      }}
       style={{
-        width: MINIMAP_WIDTH,
+        width: pinned ? 356 : MINIMAP_WIDTH,
         flexShrink: 0,
         position: "relative",
-        cursor: minimapHovered ? "ns-resize" : "default",
+        display: "flex",
+        flexDirection: pinned ? "row" : "column",
+        alignItems: pinned ? "flex-start" : "center",
+        justifyContent: "center",
         userSelect: "none",
         borderLeft: "1px solid var(--border)",
-        background: "var(--bg-panel)",
-        overflow: "visible",
+        background: pinned ? "var(--bg)" : "var(--bg-panel)",
+        transition: "width 0.25s ease, background 0.25s",
+        overflow: "hidden",
       }}
     >
-      {/* Viewport indicator */}
-      <div
-        style={{
-          position: "absolute",
-          left: 0,
-          right: 0,
-          top: `${viewportBoxTop}%`,
-          height: `${viewportBoxHeight}%`,
-          background: "rgba(100,100,100,0.1)",
-          borderTop: "1px solid rgba(100,100,100,0.2)",
-          borderBottom: "1px solid rgba(100,100,100,0.2)",
-          pointerEvents: "none",
-          zIndex: 1,
-        }}
-      />
-
-      {/* Message nodes */}
-      {nodes.map((node) => {
-        const color = getNodeColor(node.msg);
-        const isNearest = minimapHovered && nearestIndex === node.index;
-        const isUser = node.msg.role === "user";
-        const dotTop = node.topRatio * 100;
-
-        return (
-          <div
-            key={node.index}
-
-            style={{
-              position: "absolute",
-              top: `${dotTop}%`,
-              transform: "translateY(-50%)",
-              left: 0,
-              right: 0,
-              height: "12px",
-              display: "flex",
-              alignItems: "center",
-              justifyContent: "center",
-              cursor: "pointer",
-              zIndex: 2,
-            }}
-          >
-            {/* Dot */}
-            <div
-              style={{
-                width: isUser ? 8 : 6,
-                height: isUser ? 8 : 6,
-                borderRadius: isUser ? 2 : "50%",
-                background: color.bg,
-                border: `1.5px solid ${color.border}`,
-                flexShrink: 0,
-                transition: "transform 0.1s",
-                transform: isNearest ? "scale(1.6)" : "scale(1)",
-              }}
-            />
-
-
+      {/* History panel — visible when pinned, fills remaining width */}
+      {panelVisible && userMessages.length > 0 && (
+        <div style={{
+          flex: 1,
+          alignSelf: "stretch",
+          display: "flex",
+          flexDirection: "column",
+          borderRight: "1px solid var(--accent)",
+          overflow: "hidden",
+          opacity: pinned ? 1 : 0,
+          transition: "opacity 0.2s ease",
+        }}>
+          {/* Header */}
+          <div style={{
+            padding: "6px 12px",
+            background: "var(--bg-panel)",
+            borderBottom: "1px solid var(--border)",
+            flexShrink: 0,
+            fontSize: 10, color: "var(--text-dim)", fontWeight: 600,
+            textTransform: "uppercase", letterSpacing: "0.07em",
+            display: "flex", justifyContent: "space-between", alignItems: "center",
+          }}>
+            <span style={{ display: "flex", alignItems: "center", gap: 5 }}>
+              <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round">
+                <line x1="6" y1="3" x2="6" y2="15"/><circle cx="18" cy="6" r="3"/><circle cx="6" cy="18" r="3"/><path d="M18 9a9 9 0 0 1-9 9"/>
+              </svg>
+              Your Messages
+            </span>
+            <span style={{ fontSize: 9, fontWeight: 400, opacity: 0.6 }}>{userMessages.length} messages</span>
           </div>
-        );
-      })}
-
-      {/* Center line */}
-      <div
-        style={{
-          position: "absolute",
-          left: "50%",
-          top: 0,
-          bottom: 0,
-          width: 1,
-          background: "var(--border)",
-          transform: "translateX(-50%)",
-          zIndex: 0,
-        }}
-      />
-
-      {/* Tooltips for all nodes, collision-free positions */}
-      {minimapHovered && nodes.map((node, i) => {
-        const preview = getMessagePreview(node.msg);
-        const color = getNodeColor(node.msg);
-        const isNearest = nearestIndex === node.index;
-        if (!preview || tooltipPositions.length === 0) return null;
-        return (
-          <div
-            key={node.index}
-            style={{
-              position: "absolute",
-              top: tooltipPositions[i],
-              right: "100%",
-              marginRight: 6,
-              background: "var(--bg)",
-              borderTop: `1px solid ${isNearest ? color.border : "var(--border)"}`,
-              borderRight: `1px solid ${isNearest ? color.border : "var(--border)"}`,
-              borderBottom: `1px solid ${isNearest ? color.border : "var(--border)"}`,
-              borderLeft: `2px solid ${color.border}`,
-              borderRadius: 4,
-              padding: "2px 7px",
-              width: 200,
-              zIndex: 100,
-              pointerEvents: "none",
-              opacity: isNearest ? 1 : 0.45,
-              transition: "top 0.1s, opacity 0.1s",
-            }}
-          >
-            <div
-              style={{
-                fontSize: 11,
-                color: isNearest ? "var(--text)" : "var(--text-muted)",
-                lineHeight: 1.4,
-                whiteSpace: "nowrap",
-                overflow: "hidden",
-                textOverflow: "ellipsis",
-              }}
-            >
-              {preview}
-            </div>
+          {/* Scrollable message list */}
+          <div style={{
+            flex: 1,
+            overflowY: "auto",
+            minHeight: 0,
+          }}>
+            {userMessages.map((item, i) => {
+              const preview = getMessagePreview(item.msg);
+              if (!preview) return null;
+              const color = getNodeColor(item.msg);
+              return (
+                <div key={i} style={{
+                  display: "flex",
+                  alignItems: "flex-start",
+                  gap: 6,
+                  padding: "3px 12px 3px 10px",
+                  fontSize: 10,
+                  color: "var(--text)",
+                  lineHeight: 1.4,
+                  cursor: "pointer",
+                  borderLeft: `2px solid ${color.border}`,
+                  margin: "1px 8px",
+                  borderRadius: 4,
+                  transition: "background 0.1s",
+                }}
+                  onClick={() => { jumpToMessage(item.allMsgIndex); onHighlight(item.allMsgIndex); }}
+                  onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-subtle)"; }}
+                  onMouseLeave={(e) => { e.currentTarget.style.background = "transparent"; }}
+                >
+                  <span style={{
+                    fontSize: 8,
+                    color: "var(--accent)",
+                    fontWeight: 600,
+                    flexShrink: 0,
+                    minWidth: 22,
+                    padding: "1px 4px",
+                    borderRadius: 3,
+                    background: "rgba(107,140,255,0.08)",
+                    textAlign: "center",
+                  }}>#{i + 1}</span>
+                  <span style={{ overflow: "hidden", textOverflow: "ellipsis", whiteSpace: "nowrap" }}>{preview}</span>
+                </div>
+              );
+            })}
           </div>
-        );
-      })}
+        </div>
+      )}
+
+      {/* Trigger handle — always visible, on the right edge */}
+      <div
+        ref={containerRef}
+        onMouseEnter={() => { if (!pinned) { clearHideTimer(); setMinimapHovered(true); } }}
+        onMouseLeave={() => { if (!pinned) startHideTimer(); }}
+        onClick={() => {
+          if (userMessages.length > 0) {
+            if (pinned) {
+              setPinned(false);
+              setTimeout(() => setPanelVisible(false), 300);
+            } else {
+              setPanelVisible(true);
+              setPinned(true);
+            }
+          }
+        }}
+        style={{
+          display: "flex",
+          flexDirection: "column",
+          alignItems: "center",
+          justifyContent: "center",
+          gap: 5,
+          width: MINIMAP_WIDTH,
+          flexShrink: 0,
+          alignSelf: pinned ? "center" : "auto",
+          height: 100,
+          minHeight: 100,
+          borderRadius: pinned ? "12px 0 0 12px" : 12,
+          margin: pinned ? "0" : 0,
+          background: (minimapHovered || pinned) && nodes.length > 0
+            ? "linear-gradient(180deg, var(--accent), var(--teal))"
+            : "var(--bg-subtle)",
+          border: `1px solid ${(minimapHovered || pinned) && nodes.length > 0 ? "transparent" : "var(--border)"}`,
+          opacity: nodes.length > 0 ? 1 : 0.3,
+          cursor: nodes.length > 0 ? "pointer" : "default",
+          transition: "all 0.2s ease",
+          transform: (minimapHovered || pinned) ? "scale(1.05)" : "scale(1)",
+          boxShadow: (minimapHovered || pinned) && nodes.length > 0
+            ? "0 2px 10px rgba(107,140,255,0.25)"
+            : "none",
+        }}
+      >
+        {/* Chevron indicator */}
+        <svg
+          width="8" height="8" viewBox="0 0 10 10" fill="none"
+          stroke={minimapHovered && nodes.length > 0 ? "#fff" : "var(--text-dim)"}
+          strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+          style={{
+            transition: "stroke 0.15s, transform 0.2s",
+            transform: minimapHovered ? "translateX(-1px)" : "translateX(0)",
+          }}
+        >
+          <polyline points={`${pinned ? "2 2 5 5 2 8" : "6 2 3 5 6 8"}`} />
+        </svg>
+        {/* Dots line */}
+        <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
+          <div style={{
+            width: 3, height: 3, borderRadius: "50%",
+            background: minimapHovered && nodes.length > 0 ? "rgba(255,255,255,0.5)" : "var(--text-dim)",
+            transition: "background 0.15s",
+          }} />
+          <div style={{
+            width: 3, height: 3, borderRadius: "50%",
+            background: minimapHovered && nodes.length > 0 ? "rgba(255,255,255,0.8)" : "var(--text-dim)",
+            transition: "background 0.15s",
+          }} />
+          <div style={{
+            width: 3, height: 3, borderRadius: "50%",
+            background: minimapHovered && nodes.length > 0 ? "rgba(255,255,255,0.5)" : "var(--text-dim)",
+            transition: "background 0.15s",
+          }} />
+        </div>
+        {/* Chevron indicator bottom */}
+        <svg
+          width="8" height="8" viewBox="0 0 10 10" fill="none"
+          stroke={minimapHovered && nodes.length > 0 ? "#fff" : "var(--text-dim)"}
+          strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
+          style={{
+            transition: "stroke 0.15s, transform 0.2s",
+            transform: minimapHovered ? "translateX(-1px)" : "translateX(0)",
+          }}
+        >
+          <polyline points={`${pinned ? "2 2 5 5 2 8" : "6 2 3 5 6 8"}`} />
+        </svg>
+      </div>
     </div>
   );
 }

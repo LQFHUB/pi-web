@@ -91,6 +91,7 @@ function Typewriter({ phrases }: { phrases: string[] }) {
 }
 
 export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreated, onSessionForked, modelsRefreshKey, chatInputRef, onBranchDataChange, onSystemPromptChange, onSessionStatsChange, onContextUsageChange }: Props) {
+  const [highlightedMsgIndex, setHighlightedMsgIndex] = useState<number | null>(null);
   const {
     loading, error, messages, entryIds, streamState,
     agentRunning, modelNames, modelList, modelThinkingLevels, modelThinkingLevelMaps, toolPreset, thinkingLevel,
@@ -312,51 +313,81 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
 
             {(() => {
               let refIdx = 0;
-              return messages.map((msg, idx) => {
-                const prevAssistantEntryId =
-                  msg.role === "user" && idx > 0 && messages[idx - 1].role === "assistant"
-                    ? entryIds[idx - 1]
-                    : undefined;
-                const isVisible = msg.role === "user" || msg.role === "assistant";
-                const currentRefIdx = isVisible ? refIdx++ : -1;
-                let showTimestamp = false;
-                if (msg.role === "assistant") {
-                  showTimestamp = true;
-                  for (let j = idx + 1; j < messages.length; j++) {
-                    const r = messages[j].role;
-                    if (r === "user") break;
-                    if (r === "assistant") { showTimestamp = false; break; }
-                  }
-                  // Hide on the currently-streaming tail (the streaming bubble owns the live timestamp)
-                  if (showTimestamp && streamState.isStreaming && idx === messages.length - 1) {
-                    showTimestamp = false;
-                  }
+              // Group messages into turns: user msg + following assistant/toolResult msgs
+              const turns: { msgs: typeof messages; startIdx: number }[] = [];
+              let currentTurn: any[] | null = null;
+              let currentStartIdx = 0;
+              for (let i = 0; i < messages.length; i++) {
+                const msg = messages[i];
+                if (msg.role === "user") {
+                  if (currentTurn) turns.push({ msgs: currentTurn, startIdx: currentStartIdx });
+                  currentTurn = [msg];
+                  currentStartIdx = i;
+                } else if (currentTurn) {
+                  currentTurn.push(msg);
+                } else {
+                  currentTurn = [msg];
+                  currentStartIdx = i;
                 }
-                const view = (
-                  <MessageView
-                    key={idx}
-                    message={msg}
-                    toolResults={toolResultsMap}
-                    modelNames={modelNames}
-                    entryId={entryIds[idx]}
-                    onFork={agentRunning || isNew || (idx === 0 && msg.role === "user") ? undefined : handleFork}
-                    forking={forkingEntryId === entryIds[idx]}
-                    onNavigate={agentRunning ? undefined : handleNavigate}
-                    prevAssistantEntryId={agentRunning ? undefined : prevAssistantEntryId}
-                    onEditContent={(content: string) => chatInputRef?.current?.insertIfEmpty(content)}
-                    showTimestamp={showTimestamp}
-                    prevTimestamp={idx > 0 ? (messages[idx - 1] as import("@/lib/types").AgentMessage & { timestamp?: number }).timestamp : undefined}
-                  />
-                );
-                if (!isVisible) return view;
-                return (
-                  <div key={idx} ref={(el) => {
-                    messageRefs.current[currentRefIdx] = el;
-                    if (idx === lastUserIdx) { (lastUserMsgRef as { current: HTMLDivElement | null }).current = el; }
-                  }}>
-                    {view}
+              }
+              if (currentTurn) turns.push({ msgs: currentTurn, startIdx: currentStartIdx });
+
+              return turns.map((turn, turnIdx) => {
+                const firstUserIdx = turn.msgs.findIndex(m => m.role === "user");
+                const hasAssistant = turn.msgs.some(m => m.role === "assistant");
+                const panelContent = (
+                  <div style={{ display: "flex", flexDirection: "column", gap: 6 }}>
+                    {turn.msgs.map((msg, idx) => {
+                      const globalIdx = turn.startIdx + idx;
+                      const prevAssistantEntryId =
+                        msg.role === "user" && idx > 0 && turn.msgs[idx - 1]?.role === "assistant"
+                          ? entryIds[globalIdx - 1]
+                          : undefined;
+                      const isVisible = msg.role === "user" || msg.role === "assistant";
+                      const currentRefIdx = isVisible ? refIdx++ : -1;
+                      let showTimestamp = false;
+                      if (msg.role === "assistant") {
+                        showTimestamp = true;
+                        for (let j = idx + 1; j < turn.msgs.length; j++) {
+                          const r = turn.msgs[j].role;
+                          if (r === "user") break;
+                          if (r === "assistant") { showTimestamp = false; break; }
+                        }
+                        if (showTimestamp && streamState.isStreaming && globalIdx === messages.length - 1) {
+                          showTimestamp = false;
+                        }
+                      }
+                      const view = (
+                        <MessageView
+                          key={globalIdx}
+                          message={msg}
+                          highlighted={globalIdx === highlightedMsgIndex}
+                          toolResults={toolResultsMap}
+                          modelNames={modelNames}
+                          entryId={entryIds[globalIdx]}
+                          onFork={agentRunning || isNew || (globalIdx === 0 && msg.role === "user") ? undefined : handleFork}
+                          forking={forkingEntryId === entryIds[globalIdx]}
+                          onNavigate={agentRunning ? undefined : handleNavigate}
+                          prevAssistantEntryId={agentRunning ? undefined : prevAssistantEntryId}
+                          onEditContent={(content: string) => chatInputRef?.current?.insertIfEmpty(content)}
+                          showTimestamp={showTimestamp}
+                          prevTimestamp={globalIdx > 0 ? (messages[globalIdx - 1] as import("@/lib/types").AgentMessage & { timestamp?: number }).timestamp : undefined}
+                        />
+                      );
+                      if (!isVisible) return view;
+                      return (
+                        <div key={globalIdx} data-msg-id={globalIdx} ref={(el) => {
+                          messageRefs.current[currentRefIdx] = el;
+                          if (globalIdx === lastUserIdx) { (lastUserMsgRef as { current: HTMLDivElement | null }).current = el; }
+                        }}>
+                          {view}
+                        </div>
+                      );
+                    })}
                   </div>
                 );
+
+                return <div key={turnIdx}>{panelContent}</div>;
               });
             })()}
 
@@ -365,8 +396,13 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
             )}
 
             {agentRunning && !streamState.streamingMessage && (
-              <div className="py-2 text-[13px] text-text-muted">
-                <span className="animate-[pulse_1.5s_infinite]">{phaseLabel(agentPhase)}</span>
+              <div style={{ display: "flex", alignItems: "center", gap: 8, padding: "4px 0", marginLeft: 14, fontSize: 12, color: "var(--text-muted)" }}>
+                <span style={{ display: "flex", gap: 3 }}>
+                  <span className="typing-dot" style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", animation: "bounceDot 1.2s ease-in-out infinite" }} />
+                  <span className="typing-dot" style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", animation: "bounceDot 1.2s ease-in-out infinite", animationDelay: "0.15s" }} />
+                  <span className="typing-dot" style={{ display: "inline-block", width: 6, height: 6, borderRadius: "50%", background: "var(--accent)", animation: "bounceDot 1.2s ease-in-out infinite", animationDelay: "0.3s" }} />
+                </span>
+                <span>{phaseLabel(agentPhase)}</span>
               </div>
             )}
 
@@ -382,6 +418,7 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
           streamingMessage={streamState.streamingMessage}
           scrollContainer={scrollContainerRef}
           messageRefs={messageRefs}
+          onHighlight={(idx) => { setHighlightedMsgIndex(idx); setTimeout(() => setHighlightedMsgIndex(null), 2200); }}
         />
       </div>
 

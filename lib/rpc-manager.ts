@@ -1,4 +1,4 @@
-import { createAgentSession, SessionManager } from "@earendil-works/pi-coding-agent";
+import { createAgentSession, SessionManager, DefaultResourceLoader } from "@earendil-works/pi-coding-agent";
 import { cacheSessionPath } from "./session-reader";
 import type { AgentSessionLike, ToolInfo } from "./pi-types";
 
@@ -302,10 +302,19 @@ export async function startRpcSession(
       toolsOption = toolNames.length === 0 ? [] : allCodingToolNames;
     }
 
+    // Use a resource loader that appends a Chinese language instruction to the system prompt
+    const resourceLoader = new DefaultResourceLoader({
+      cwd,
+      agentDir,
+      systemPromptOverride: () => "请用中文回答所有问题。最终回复必须使用中文。",
+    });
+    await resourceLoader.reload();
+
     const { session: inner } = await createAgentSession({
       cwd,
       agentDir,
       sessionManager,
+      resourceLoader,
       ...(toolsOption !== undefined ? { tools: toolsOption } : {}),
     });
 

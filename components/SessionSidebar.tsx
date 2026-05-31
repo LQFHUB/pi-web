@@ -183,6 +183,7 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
   }, []);
 
   const restoredRef = useRef(false);
+  const userChoseAllRef = useRef(false);
 
   useEffect(() => {
     onCwdChange?.(selectedCwd);
@@ -193,6 +194,9 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
     if (allSessions.length === 0) return;
 
     if (selectedCwd === null) {
+      // If user explicitly chose "all projects", don't auto-select a cwd
+      if (userChoseAllRef.current) return;
+
       // If restoring a session, set cwd to match that session
       if (initialSessionId && !restoredRef.current) {
         restoredRef.current = true;
@@ -410,6 +414,40 @@ export function SessionSidebar({ selectedSessionId, onSelectSession, onNewSessio
                 overflow: "hidden",
               }}
             >
+              {/* "All projects" option */}
+              <button
+                onClick={() => {
+                  userChoseAllRef.current = true;
+                  setSelectedCwd(null);
+                  setCustomPathOpen(false);
+                  setCustomPathValue("");
+                  setDropdownOpen(false);
+                }}
+                style={{
+                  display: "flex",
+                  alignItems: "center",
+                  gap: 7,
+                  width: "100%",
+                  padding: "8px 10px",
+                  background: selectedCwd === null ? "var(--bg-selected)" : "none",
+                  border: "none",
+                  borderBottom: "1px solid var(--border)",
+                  color: selectedCwd === null ? "var(--text)" : "var(--text-muted)",
+                  cursor: "pointer",
+                  textAlign: "left",
+                  fontSize: 11,
+                  fontFamily: "var(--font-mono)",
+                }}
+              >
+                {selectedCwd === null && (
+                  <svg width="10" height="10" viewBox="0 0 10 10" fill="none" stroke="var(--accent)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
+                    <polyline points="1.5 5 4 7.5 8.5 2.5" />
+                  </svg>
+                )}
+                {selectedCwd !== null && <span style={{ width: 10, flexShrink: 0 }} />}
+                <span style={{ flex: 1 }}>所有项目</span>
+              </button>
+
               {recentCwds.map((cwd) => (
                 <button
                   key={cwd}
@@ -834,30 +872,24 @@ function SessionItem({
   }, []);
 
   // Fixed-height outer wrapper — content swaps in place so the list never reflows
-  const ITEM_HEIGHT = 54;
-
   return (
     <div
       onClick={confirmDelete || renaming ? undefined : onClick}
       onMouseEnter={() => setHovered(true)}
       onMouseLeave={() => { setHovered(false); }}
       style={{
-        height: ITEM_HEIGHT,
         display: "flex",
         alignItems: "center",
-        paddingLeft: depth > 0 ? depth * 12 + 14 : 14,
-        paddingRight: 8,
+        padding: "10px 14px",
+        margin: "1px 6px",
         cursor: confirmDelete || renaming ? "default" : "pointer",
         background: confirmDelete
           ? "rgba(239,68,68,0.06)"
           : isSelected ? "var(--bg-selected)" : hovered ? "var(--bg-hover)" : "transparent",
-        borderLeft: confirmDelete
-          ? "2px solid #ef4444"
-          : isSelected ? "2px solid var(--accent)" : "2px solid transparent",
-        transition: "background 0.12s, border-color 0.12s, transform 0.12s",
-        transform: hovered && !isSelected ? "translateX(3px)" : "none",
+        borderLeft: "none",
+        transition: "background 0.15s",
         opacity: deleting ? 0.5 : 1,
-        gap: 8,
+        gap: 10,
         overflow: "hidden",
         borderRadius: 8,
       }}
@@ -930,32 +962,22 @@ function SessionItem({
       ) : (
         /* ── Normal view ── */
         <>
-          {/* Fork indicator for child sessions */}
-          {depth > 0 && (
-            <svg width="10" height="10" viewBox="0 0 24 24" fill="none" stroke="var(--text-dim)" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ flexShrink: 0 }}>
-              <line x1="6" y1="3" x2="6" y2="15" />
-              <circle cx="18" cy="6" r="3" />
-              <circle cx="6" cy="18" r="3" />
-              <path d="M18 9a9 9 0 0 1-9 9" />
-            </svg>
-          )}
-<div style={{ flex: 1, minWidth: 0 }}>
+          <div style={{ flex: 1, minWidth: 0 }}>
             <div
               style={{
-                fontSize: 12,
+                fontSize: 13,
                 fontWeight: isSelected ? 500 : 400,
                 lineHeight: 1.4,
                 overflow: "hidden",
                 textOverflow: "ellipsis",
                 whiteSpace: "nowrap",
                 color: "var(--text)",
-                transition: "color 0.12s",
               }}
               title={title}
             >
               {title}
             </div>
-            <div style={{ marginTop: 2, display: "flex", gap: 8, color: "var(--text-dim)", fontSize: 11 }}>
+            <div style={{ marginTop: 3, display: "flex", gap: 8, color: "var(--text-dim)", fontSize: 11 }}>
               <span title={session.modified}>{formatRelativeTime(session.modified)}</span>
               <span>{session.messageCount} msgs</span>
             </div>

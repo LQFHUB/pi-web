@@ -27,6 +27,14 @@ export function AppShell() {
   const [modelsRefreshKey, setModelsRefreshKey] = useState(0);
   const [skillsConfigOpen, setSkillsConfigOpen] = useState(false);
   const [sidebarOpen, setSidebarOpen] = useState(true);
+  const [isMobile, setIsMobile] = useState(false);
+  useEffect(() => {
+    const mq = window.matchMedia("(max-width: 640px)");
+    const handler = (e: MediaQueryListEvent | MediaQueryList) => setIsMobile(e.matches);
+    handler(mq);
+    mq.addEventListener("change", handler);
+    return () => mq.removeEventListener("change", handler);
+  }, []);
   const chatInputRef = useRef<ChatInputHandle | null>(null);
   const topBarRef = useRef<HTMLDivElement>(null);
 
@@ -224,8 +232,6 @@ export function AppShell() {
   // While restoring initial session from URL, don't show the placeholder
   const showPlaceholder = initialSessionRestored && !showChat;
 
-  const activeFileTab = fileTabs.find((t) => t.id === activeFileTabId) ?? null;
-
   const sidebarContent = (
     <>
       <SessionSidebar
@@ -298,16 +304,19 @@ export function AppShell() {
         }}
       />
 
-      {/* Left sidebar */}
+      {/* Left sidebar — always in DOM, display: none on desktop when closed */}
       <div
-        className={`sidebar-container${sidebarOpen ? " sidebar-open" : " sidebar-closed"}`}
+        className={`sidebar-container${isMobile && sidebarOpen ? " sidebar-open" : isMobile ? " sidebar-closed" : ""}`}
         style={{
-          background: "var(--bg-panel)",
-          borderRight: "1px solid var(--border)",
-          display: "flex",
+          display: isMobile ? undefined : sidebarOpen ? "flex" : "none",
           flexDirection: "column",
-          flexShrink: 0,
+          background: "var(--bg-panel)",
+          borderRight: isMobile ? "1px solid var(--border)" : sidebarOpen ? "1px solid var(--border)" : "none",
           zIndex: 200,
+          flexShrink: 0,
+          width: isMobile ? undefined : 260,
+          minWidth: isMobile ? undefined : 260,
+          overflow: "hidden",
         }}
       >
         {sidebarContent}
@@ -400,8 +409,8 @@ export function AppShell() {
                   color: activeTopPanel === "system" ? "var(--text)" : "var(--text-muted)",
                   fontSize: 11, whiteSpace: "nowrap", transition: "color 0.1s, background 0.1s",
                 }}
-                onMouseEnter={(e) => { e.currentTarget.style.color = "var(--text)"; }}
-                onMouseLeave={(e) => { e.currentTarget.style.color = activeTopPanel === "system" ? "var(--text)" : "var(--text-muted)"; }}
+                onMouseEnter={(e) => { e.currentTarget.style.background = "var(--bg-hover)"; e.currentTarget.style.color = "var(--text)"; }}
+                onMouseLeave={(e) => { e.currentTarget.style.background = activeTopPanel === "system" ? "var(--bg-selected)" : "none"; e.currentTarget.style.color = activeTopPanel === "system" ? "var(--text)" : "var(--text-muted)"; }}
               >
                 <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round" style={{ color: systemPrompt ? "var(--accent)" : "var(--text-dim)", flexShrink: 0 }}>
                   <path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z" />
@@ -564,15 +573,22 @@ export function AppShell() {
                 Select a session from the sidebar
               </div>
             ) : (
-              <div style={{ position: "absolute", top: 12, left: 12, display: "flex", alignItems: "flex-start", gap: 8, userSelect: "none", pointerEvents: "none" }}>
-                <svg width="44" height="44" viewBox="0 0 24 24" fill="none" stroke="var(--accent)" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round" style={{ opacity: 0.7, flexShrink: 0 }}>
-                  <line x1="20" y1="12" x2="4" y2="12" /><polyline points="10 6 4 12 10 18" />
-                </svg>
-                <div>
-                  <div style={{ fontSize: 18, fontWeight: 600, color: "var(--text)", marginBottom: 8 }}>Get Started</div>
+              <div style={{ height: "100%", display: "flex", flexDirection: "column", alignItems: "center", justifyContent: "center", gap: 16 }}>
+                <div style={{
+                  width: 48, height: 48, borderRadius: 14,
+                  background: "linear-gradient(135deg, var(--accent), var(--teal))",
+                  display: "flex", alignItems: "center", justifyContent: "center",
+                  boxShadow: "0 4px 16px rgba(107,140,255,0.2)",
+                }}>
+                  <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="#fff" strokeWidth="1.5" strokeLinecap="round" strokeLinejoin="round">
+                    <line x1="20" y1="12" x2="4" y2="12" /><polyline points="10 6 4 12 10 18" />
+                  </svg>
+                </div>
+                <div style={{ textAlign: "center" }}>
+                  <div style={{ fontSize: 16, fontWeight: 600, color: "var(--text)", marginBottom: 4 }}>Get Started</div>
                   <div style={{ fontSize: 12, color: "var(--text-muted)", lineHeight: 1.8 }}>
-                    <span style={{ color: "var(--text-dim)", marginRight: 6 }}>1.</span>Select a project directory from the sidebar<br />
-                    <span style={{ color: "var(--text-dim)", marginRight: 6 }}>2.</span>Add models via the <strong style={{ color: "var(--text)" }}>Models</strong> button at the bottom
+                    Select a project directory from the sidebar to begin<br />
+                    or configure models via the bottom menu
                   </div>
                 </div>
               </div>
@@ -581,39 +597,27 @@ export function AppShell() {
         </div>
       </div>
 
-      {/* Right panel: file viewer — always mounted, width animated via CSS */}
+      {/* Right panel: file viewer — always in DOM, display: none on desktop when closed */}
       <div
-        className={`right-panel-container${rightPanelOpen ? " right-panel-open" : " right-panel-closed"}`}
+        className={`right-panel-container${isMobile && rightPanelOpen ? " right-panel-open" : isMobile ? " right-panel-closed" : ""}`}
         style={{
-          display: "flex",
+          display: isMobile ? undefined : rightPanelOpen ? "flex" : "none",
           flexDirection: "column",
-          borderLeft: "1px solid var(--border)",
+          borderLeft: isMobile ? "1px solid var(--border)" : rightPanelOpen ? "1px solid var(--border)" : "none",
           background: "var(--bg)",
+          flexShrink: 0,
+          width: isMobile ? undefined : "42%",
+          minWidth: isMobile ? undefined : 300,
+          overflow: "hidden",
         }}
       >
-        {/* Right panel tab bar */}
-        <div style={{ display: "flex", alignItems: "center", flexShrink: 0, background: "var(--bg-panel)", borderBottom: "1px solid var(--border)", height: 36 }}>
-          <div style={{ flex: 1, overflow: "hidden" }}>
-            <TabBar
-              tabs={fileTabs}
-              activeTabId={activeFileTabId ?? ""}
-              onSelectTab={setActiveFileTabId}
-              onCloseTab={handleCloseFileTab}
-            />
-          </div>
-
-        </div>
-
-        {/* File content */}
-        <div style={{ flex: 1, overflow: "hidden" }}>
-          {activeFileTab?.filePath ? (
-            <FileViewer filePath={activeFileTab.filePath} cwd={activeCwd ?? undefined} />
-          ) : (
-            <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-dim)", fontSize: 12 }}>
-              No file open
-            </div>
-          )}
-        </div>
+        <RightPanelContent
+          fileTabs={fileTabs}
+          activeFileTabId={activeFileTabId}
+          onSelectTab={setActiveFileTabId}
+          onCloseTab={handleCloseFileTab}
+          activeCwd={activeCwd}
+        />
       </div>
     </div>
     {/* File panel toggle — always visible at top-right */}
@@ -639,6 +643,39 @@ export function AppShell() {
     {skillsConfigOpen && (activeCwd ?? selectedSession?.cwd ?? newSessionCwd) && (
       <SkillsConfig cwd={(activeCwd ?? selectedSession?.cwd ?? newSessionCwd)!} onClose={() => setSkillsConfigOpen(false)} />
     )}
+    </>
+  );
+}
+
+function RightPanelContent({ fileTabs, activeFileTabId, onSelectTab, onCloseTab, activeCwd }: {
+  fileTabs: Tab[];
+  activeFileTabId: string | null;
+  onSelectTab: (id: string) => void;
+  onCloseTab: (id: string) => void;
+  activeCwd: string | null | undefined;
+}) {
+  const activeFileTab = fileTabs.find((t) => t.id === activeFileTabId) ?? null;
+  return (
+    <>
+      <div style={{ display: "flex", alignItems: "center", flexShrink: 0, background: "var(--bg-panel)", borderBottom: "1px solid var(--border)", height: 36 }}>
+        <div style={{ flex: 1, overflow: "hidden" }}>
+          <TabBar
+            tabs={fileTabs}
+            activeTabId={activeFileTabId ?? ""}
+            onSelectTab={onSelectTab}
+            onCloseTab={onCloseTab}
+          />
+        </div>
+      </div>
+      <div style={{ flex: 1, overflow: "hidden" }}>
+        {activeFileTab?.filePath ? (
+          <FileViewer filePath={activeFileTab.filePath} cwd={activeCwd ?? undefined} />
+        ) : (
+          <div style={{ height: "100%", display: "flex", alignItems: "center", justifyContent: "center", color: "var(--text-dim)", fontSize: 12 }}>
+            No file open
+          </div>
+        )}
+      </div>
     </>
   );
 }

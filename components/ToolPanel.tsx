@@ -60,12 +60,12 @@ export function ToolPanel({ tools, onPreset, onClose }: Props) {
         background: "var(--bg)",
         border: "1px solid var(--border)",
         borderRadius: 10,
-        boxShadow: "0 -4px 20px rgba(0,0,0,0.10)",
-        width: 260,
-        padding: "12px 14px",
+        boxShadow: "0 -4px 16px rgba(0,0,0,0.08)",
+        width: 240,
+        padding: "10px 12px",
         display: "flex",
         flexDirection: "column",
-        gap: 10,
+        gap: 8,
       }}
     >
       {/* Segmented control */}
@@ -73,9 +73,9 @@ export function ToolPanel({ tools, onPreset, onClose }: Props) {
         display: "grid",
         gridTemplateColumns: "1fr 1fr 1fr",
         background: "var(--bg-panel)",
-        borderRadius: 8,
-        padding: 3,
-        gap: 3,
+        borderRadius: 7,
+        padding: 2,
+        gap: 2,
       }}>
         {PRESETS.map((preset) => {
           const isActive = current === preset.id;

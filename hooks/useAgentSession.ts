@@ -555,6 +555,22 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
     container.scrollTo({ top: elAbsTop - 16, behavior: "smooth" });
   }, []);
 
+  const scrollLastToCenter = useCallback(() => {
+    const container = scrollContainerRef.current;
+    if (!container) return;
+    // 内容未超过屏幕一半时不滚动
+    if (container.scrollHeight <= container.clientHeight * 1.5) return;
+    const msgs = container.querySelectorAll('[data-msg-id]');
+    if (msgs.length === 0) return;
+    const last = msgs[msgs.length - 1] as HTMLElement;
+    if (!last) return;
+    const containerRect = container.getBoundingClientRect();
+    const elRect = last.getBoundingClientRect();
+    const centerOffset = (containerRect.height - elRect.height) / 2;
+    const elTop = elRect.top - containerRect.top + container.scrollTop;
+    container.scrollTo({ top: elTop - centerOffset, behavior: "smooth" });
+  }, []);
+
   // Load session on mount
   useEffect(() => {
     if (session) {
@@ -601,11 +617,14 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       } else if (!initialScrollDoneRef.current) {
         initialScrollDoneRef.current = true;
         scrollToBottom("instant");
-      } else if (!agentRunningRef.current) {
+      } else if (agentRunningRef.current) {
+        // Center the last message when streaming
+        scrollLastToCenter();
+      } else {
         scrollToBottom("smooth");
       }
     }
-  }, [messages.length, agentRunning, scrollToBottom, scrollUserMsgToTop]);
+  }, [messages.length, agentRunning, scrollToBottom, scrollUserMsgToTop, scrollLastToCenter]);
 
   // Load model list
   useEffect(() => {
