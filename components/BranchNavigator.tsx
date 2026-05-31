@@ -66,10 +66,13 @@ function getLabel(entry: SessionEntry): string {
   return entry.type;
 }
 
-// Does the tree have any branching at all?
+// Does the tree have any branching at all? (only message entries count)
 function hasBranch(nodes: SessionTreeNode[]): boolean {
   for (const node of nodes) {
-    if (node.children.length > 1) return true;
+    if (node.entry.type !== "message") continue;
+    // Count only message-type children (not compaction, model_change, etc.)
+    const msgChildren = node.children.filter(c => c.entry.type === "message");
+    if (msgChildren.length > 1) return true;
     if (hasBranch(node.children)) return true;
   }
   return false;

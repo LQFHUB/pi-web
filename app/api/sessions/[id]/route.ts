@@ -9,6 +9,7 @@ import {
   listAllSessions,
 } from "@/lib/session-reader";
 import { getRpcSession } from "@/lib/rpc-manager";
+import type { SessionEntry } from "@/lib/types";
 
 export async function GET(
   req: Request,
@@ -62,17 +63,37 @@ export async function GET(
       }
     }
 
+    // JSON.stringify natively handles deep nesting (2200+ depth) fine,
+    // but undici's Response.json()/NextResponse.json() has a smaller stack.
+    // Use the flattened tree format to avoid any nesting in serialization.
+    const flatTree: Array<{ entry: SessionEntry; children: string[]; label?: string }> = [];
+    {
+      const stack = [...tree];
+      while (stack.length > 0) {
+        const n = stack.pop()!;
+        flatTree.push({
+          entry: n.entry as SessionEntry,
+          children: n.children.map((c: { entry: { id: string } }) => c.entry.id),
+          label: (n as { label?: string }).label,
+        });
+        stack.push(...n.children);
+      }
+    }
+
     return NextResponse.json({
       sessionId: id,
       filePath,
       info,
-      tree,
+      tree: flatTree,
       leafId,
       context,
       ...(agentState !== undefined ? { agentState } : {}),
     });
   } catch (error) {
-    return NextResponse.json({ error: String(error) }, { status: 500 });
+    const msg = error instanceof Error 
+      ? error.message + ' | ' + (error.stack?.split('\n').slice(0,3).join(' || '))
+      : String(error);
+    return NextResponse.json({ error: String(error), detail: msg }, { status: 500 });
   }
 }
 

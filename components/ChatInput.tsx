@@ -59,6 +59,21 @@ const THINKING_LEVEL_DESC: Record<typeof THINKING_LEVELS[number], string> = {
   xhigh: "最高强度推理",
 };
 
+const SLASH_COMMANDS = [
+  { id: "compact", label: "Compact", icon: "📦", desc: "压缩对话历史", color: "#f59e0b" },
+  { id: "model", label: "Model", icon: "🤖", desc: "切换 AI 模型", color: "#0d9488" },
+  { id: "thinking", label: "Thinking", icon: "🧠", desc: "设置推理强度", color: "#8b5cf6" },
+  { id: "tools", label: "Tools", icon: "🔧", desc: "切换工具集", color: "#6b7280" },
+  { id: "abort", label: "Abort", icon: "⏹", desc: "中止当前执行", color: "#dc2626" },
+  { id: "steer", label: "Steer", icon: "↪", desc: "打断并注入消息", color: "#f97316" },
+  { id: "followup", label: "Follow-up", icon: "⤵", desc: "排队追加消息", color: "#14b8a6" },
+  { id: "retry", label: "Retry", icon: "↻", desc: "重新发送上一条消息", color: "#6b8cff" },
+  { id: "auto-compact", label: "Auto-compact", icon: "🔄", desc: "切换自动压缩", color: "#eab308" },
+  { id: "auto-retry", label: "Auto-retry", icon: "♻", desc: "切换自动重试", color: "#10b981" },
+  { id: "clear", label: "Clear", icon: "✕", desc: "清空输入框和图片", color: "#dc2626" },
+  { id: "help", label: "Help", icon: "?", desc: "显示帮助信息", color: "#6b8cff" },
+];
+
 export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   onSend, onAbort, onSteer, onFollowUp, isStreaming, model, modelNames, modelList, onModelChange,
   onCompact, onAbortCompaction, isCompacting, compactError, toolPreset, onToolPresetChange,
@@ -73,12 +88,16 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const [thinkingDropdownOpen, setThinkingDropdownOpen] = useState(false);
   const [attachedImages, setAttachedImages] = useState<AttachedImage[]>([]);
   const [inputFocused, setInputFocused] = useState(false);
+  const [slashOpen, setSlashOpen] = useState(false);
+  const [slashFilter, setSlashFilter] = useState("");
+  const [slashSelected, setSlashSelected] = useState(0);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownPanelRef = useRef<HTMLDivElement>(null);
   const toolDropdownRef = useRef<HTMLDivElement>(null);
   const thinkingDropdownRef = useRef<HTMLDivElement>(null);
+  const slashDropdownRef = useRef<HTMLDivElement>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
 
   useImperativeHandle(ref, () => ({
@@ -184,8 +203,96 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     if (textareaRef.current) textareaRef.current.style.height = "auto";
   }, [value, attachedImages, onSteer, onFollowUp, clearImages]);
 
+  const closeSlash = useCallback(() => {
+    setSlashOpen(false);
+    setSlashFilter("");
+    setSlashSelected(0);
+  }, []);
+
+  const executeSlashCommand = useCallback((cmdId: string) => {
+    closeSlash();
+    setValue("");
+    const ta = textareaRef.current;
+    switch (cmdId) {
+      case "compact":
+        onCompact?.();
+        break;
+      case "model":
+        if (ta) { ta.blur(); setTimeout(() => setModelDropdownOpen(true), 10); }
+        else setModelDropdownOpen(true);
+        break;
+      case "thinking":
+        if (ta) { ta.blur(); setTimeout(() => setThinkingDropdownOpen(true), 10); }
+        else setThinkingDropdownOpen(true);
+        break;
+      case "tools":
+        if (ta) { ta.blur(); setTimeout(() => setToolDropdownOpen(true), 10); }
+        else setToolDropdownOpen(true);
+        break;
+      case "abort":
+        onAbort();
+        break;
+      case "steer":
+        if (ta) ta.focus();
+        setValue("输入 Steer 消息后按 Enter");
+        break;
+      case "followup":
+        if (ta) ta.focus();
+        setValue("输入 Follow-up 消息后按 Enter");
+        break;
+      case "retry":
+        if (isStreaming && onSteer) onSteer("");
+        else { if (ta) ta.focus(); setValue("已清空，输入新消息后 Enter 发送"); }
+        break;
+      case "auto-compact": {
+        // Toggle via existing send mechanism
+        setValue("auto-compact 切换已触发 (需后端支持)");
+        break;
+      }
+      case "auto-retry": {
+        setValue("auto-retry 切换已触发 (需后端支持)");
+        break;
+      }
+      case "clear":
+        clearImages();
+        if (ta) ta.focus();
+        break;
+      case "help": {
+        const lines = SLASH_COMMANDS.map((c) => `/${c.id.padEnd(14)}${c.desc}`).join("\n");
+        setValue(lines);
+        break;
+      }
+    }
+  }, [closeSlash, onCompact, onAbort, onSteer, isStreaming, clearImages]);
+
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      // Slash command navigation
+      if (slashOpen) {
+        const filtered = SLASH_COMMANDS.filter((c) => c.id.startsWith(slashFilter));
+        if (e.key === "ArrowDown") {
+          e.preventDefault();
+          setSlashSelected((prev) => Math.min(prev + 1, filtered.length - 1));
+          return;
+        }
+        if (e.key === "ArrowUp") {
+          e.preventDefault();
+          setSlashSelected((prev) => Math.max(prev - 1, 0));
+          return;
+        }
+        if (e.key === "Enter" && !e.shiftKey) {
+          e.preventDefault();
+          const cmd = filtered[slashSelected];
+          if (cmd) executeSlashCommand(cmd.id);
+          return;
+        }
+        if (e.key === "Escape") {
+          e.preventDefault();
+          closeSlash();
+          return;
+        }
+      }
+
       if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
         e.preventDefault();
         if (isStreaming && (onSteer || onFollowUp)) {
@@ -196,7 +303,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         }
       }
     },
-    [isStreaming, onSteer, onFollowUp, sendQueued, handleSend]
+    [isStreaming, onSteer, onFollowUp, sendQueued, handleSend, slashOpen, slashFilter, slashSelected, closeSlash, executeSlashCommand]
   );
 
   const handleInput = useCallback(() => {
@@ -242,6 +349,8 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
     : modelOptions.length > 0 ? modelOptions[0].name : null;
 
   // Close dropdowns on outside click
+  const slashOpenRef = useRef(slashOpen);
+  slashOpenRef.current = slashOpen;
   useEffect(() => {
     const handler = (e: MouseEvent) => {
       if (
@@ -255,6 +364,11 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
       }
       if (thinkingDropdownRef.current && !thinkingDropdownRef.current.contains(e.target as Node)) {
         setThinkingDropdownOpen(false);
+      }
+      if (slashDropdownRef.current && slashOpenRef.current && !slashDropdownRef.current.contains(e.target as Node)) {
+        setSlashOpen(false);
+        setSlashFilter("");
+        setSlashSelected(0);
       }
     };
     document.addEventListener("mousedown", handler);
@@ -336,6 +450,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
           style={{
             display: "flex",
             gap: 8,
+            position: "relative",
             alignItems: "center",
             background: "var(--input-bg)",
             border: `1px solid ${inputFocused ? "var(--accent)" : (isStreaming && (onSteer || onFollowUp) ? "rgba(234,179,8,0.4)" : "var(--input-border)")}`,
@@ -348,7 +463,25 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
           <textarea
             ref={textareaRef}
             value={value}
-            onChange={(e) => setValue(e.target.value)}
+            onChange={(e) => {
+              const v = e.target.value;
+              setValue(v);
+              // Detect slash commands
+              if (v.startsWith("/")) {
+                const afterSlash = v.slice(1).toLowerCase();
+                // Don't open if it looks like a URL path or file path
+                if (!afterSlash.includes(" ") && !afterSlash.includes("\\")) {
+                  const filtered = SLASH_COMMANDS.filter((c) => c.id.startsWith(afterSlash));
+                  setSlashOpen(filtered.length > 0);
+                  setSlashFilter(afterSlash);
+                  setSlashSelected(0);
+                } else {
+                  closeSlash();
+                }
+              } else {
+                closeSlash();
+              }
+            }}
             onFocus={() => setInputFocused(true)}
             onBlur={() => setInputFocused(false)}
             onKeyDown={handleKeyDown}
@@ -376,6 +509,59 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
               overflow: "auto",
             }}
           />
+
+          {/* Slash command dropdown */}
+          {slashOpen && (() => {
+            const filtered = SLASH_COMMANDS.filter((c) => c.id.startsWith(slashFilter));
+            if (filtered.length === 0) return null;
+            return (
+              <div
+                ref={slashDropdownRef}
+                style={{
+                  position: "absolute",
+                  bottom: "100%",
+                  left: 0,
+                  right: 0,
+                  marginBottom: 4,
+                  background: "var(--bg)",
+                  border: "1px solid var(--border)",
+                  borderRadius: 8,
+                  boxShadow: "0 4px 16px rgba(0,0,0,0.08)",
+                  zIndex: 200,
+                  overflow: "hidden",
+                }}
+              >
+                {filtered.map((cmd, i) => (
+                  <div
+                    key={cmd.id}
+                    onClick={() => executeSlashCommand(cmd.id)}
+                    onMouseEnter={() => setSlashSelected(i)}
+                    style={{
+                      display: "flex",
+                      alignItems: "center",
+                      gap: 8,
+                      padding: "6px 12px",
+                      cursor: "pointer",
+                      background: i === slashSelected ? "var(--bg-selected)" : "transparent",
+                      transition: "background 0.1s",
+                    }}
+                  >
+                    <div style={{
+                      width: 22, height: 22, borderRadius: 5, flexShrink: 0,
+                      display: "flex", alignItems: "center", justifyContent: "center",
+                      background: cmd.color,
+                      fontSize: 11, fontWeight: 600, color: "#fff",
+                      fontFamily: "ui-monospace, monospace",
+                    }}>{cmd.icon}</div>
+                    <div style={{ flex: 1, minWidth: 0 }}>
+                      <div style={{ fontSize: 12, fontWeight: 500, color: "var(--text)" }}>{cmd.label}</div>
+                      <div style={{ fontSize: 10, color: "var(--text-dim)", marginTop: 1 }}>{cmd.desc}</div>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            );
+          })()}
 
           {isStreaming ? (
             <div style={{ display: "flex", alignItems: "center", gap: 6, flexShrink: 0, alignSelf: "flex-end" }}>

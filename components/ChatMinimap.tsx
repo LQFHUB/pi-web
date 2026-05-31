@@ -72,6 +72,7 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
   const [nodes, setNodes] = useState<NodeInfo[]>([]);
   const [minimapHovered, setMinimapHovered] = useState(false);
   const [pinned, setPinned] = useState(false);
+  const [panelVisible, setPanelVisible] = useState(false);
   const hideTimerRef = useRef<ReturnType<typeof setTimeout> | null>(null);
   const [mouseYRatio, setMouseYRatio] = useState<number | null>(null);
   const draggingRef = useRef(false);
@@ -265,13 +266,15 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
     >
       {/* History panel — fills remaining width when visible, collapses to 0 width */}
       <div style={{
-        flex: pinned ? 1 : 0,
-        alignSelf: pinned ? "stretch" : "auto",
-        overflow: "hidden",
+        flexShrink: 0,
+        overflow: pinned ? undefined : "hidden",
+        width: pinned ? 320 : 0,
+        height: "100%",
         opacity: pinned ? 1 : 0,
-        transition: "flex 0.25s ease, opacity 0.15s ease",
+        transition: "width 0.25s ease, opacity 0.15s ease",
       }}>
-        {userMessages.length > 0 && <div style={{
+        {panelVisible && userMessages.length > 0 && <div style={{
+          width: 320,
           height: "100%",
           display: "flex",
           flexDirection: "column",
@@ -350,7 +353,13 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
         onMouseLeave={() => { if (!pinned) startHideTimer(); }}
         onClick={() => {
           if (userMessages.length > 0) {
-            setPinned(v => !v);
+            if (pinned) {
+              setPinned(false);
+              setTimeout(() => setPanelVisible(false), 300);
+            } else {
+              setPanelVisible(true);
+              setPinned(true);
+            }
           }
         }}
         style={{
@@ -368,21 +377,21 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
           margin: pinned ? "0" : 0,
           background: (minimapHovered || pinned) && nodes.length > 0
             ? "linear-gradient(180deg, var(--accent), var(--teal))"
-            : "var(--bg-subtle)",
-          border: `1px solid ${(minimapHovered || pinned) && nodes.length > 0 ? "transparent" : "var(--border)"}`,
+            : "var(--bg-hover)",
+          border: `1px solid ${(minimapHovered || pinned) && nodes.length > 0 ? "transparent" : "rgba(107,140,255,0.15)"}`,
           opacity: nodes.length > 0 ? 1 : 0.3,
           cursor: nodes.length > 0 ? "pointer" : "default",
           transition: "all 0.2s ease",
           transform: (minimapHovered || pinned) ? "scale(1.05)" : "scale(1)",
           boxShadow: (minimapHovered || pinned) && nodes.length > 0
             ? "0 2px 10px rgba(107,140,255,0.25)"
-            : "none",
+            : nodes.length > 0 ? "0 1px 3px rgba(0,0,0,0.04)" : "none",
         }}
       >
         {/* Chevron indicator */}
         <svg
           width="8" height="8" viewBox="0 0 10 10" fill="none"
-          stroke={minimapHovered && nodes.length > 0 ? "#fff" : "var(--text-dim)"}
+          stroke={minimapHovered && nodes.length > 0 ? "#fff" : "var(--text-muted)"}
           strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
           style={{
             transition: "stroke 0.15s, transform 0.2s",
@@ -395,24 +404,24 @@ export function ChatMinimap({ messages, streamingMessage, scrollContainer, messa
         <div style={{ display: "flex", flexDirection: "column", alignItems: "center", gap: 3 }}>
           <div style={{
             width: 3, height: 3, borderRadius: "50%",
-            background: minimapHovered && nodes.length > 0 ? "rgba(255,255,255,0.5)" : "var(--text-dim)",
+            background: minimapHovered && nodes.length > 0 ? "rgba(255,255,255,0.5)" : "var(--text-muted)",
             transition: "background 0.15s",
           }} />
           <div style={{
             width: 3, height: 3, borderRadius: "50%",
-            background: minimapHovered && nodes.length > 0 ? "rgba(255,255,255,0.8)" : "var(--text-dim)",
+            background: minimapHovered && nodes.length > 0 ? "rgba(255,255,255,0.8)" : "var(--accent)",
             transition: "background 0.15s",
           }} />
           <div style={{
             width: 3, height: 3, borderRadius: "50%",
-            background: minimapHovered && nodes.length > 0 ? "rgba(255,255,255,0.5)" : "var(--text-dim)",
+            background: minimapHovered && nodes.length > 0 ? "rgba(255,255,255,0.5)" : "var(--text-muted)",
             transition: "background 0.15s",
           }} />
         </div>
         {/* Chevron indicator bottom */}
         <svg
           width="8" height="8" viewBox="0 0 10 10" fill="none"
-          stroke={minimapHovered && nodes.length > 0 ? "#fff" : "var(--text-dim)"}
+          stroke={minimapHovered && nodes.length > 0 ? "#fff" : "var(--text-muted)"}
           strokeWidth="1.6" strokeLinecap="round" strokeLinejoin="round"
           style={{
             transition: "stroke 0.15s, transform 0.2s",
