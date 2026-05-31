@@ -617,14 +617,11 @@ export function useAgentSession(opts: UseAgentSessionOptions) {
       } else if (!initialScrollDoneRef.current) {
         initialScrollDoneRef.current = true;
         scrollToBottom("instant");
-      } else if (agentRunningRef.current) {
-        // Center the last message when streaming
-        scrollLastToCenter();
       } else {
         scrollToBottom("smooth");
       }
     }
-  }, [messages.length, agentRunning, scrollToBottom, scrollUserMsgToTop, scrollLastToCenter]);
+  }, [messages.length, agentRunning, scrollToBottom, scrollUserMsgToTop]);
 
   // Load model list
   useEffect(() => {
