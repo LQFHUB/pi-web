@@ -795,6 +795,38 @@ function SessionTreeItem({
   );
 }
 
+// 12 vibrant colors — each session picks one via hash
+const SESSION_COLORS = [
+  { bg: "#4a6cf7", abbr: "B" }, // steel blue
+  { bg: "#0d9488", abbr: "T" }, // teal
+  { bg: "#8b5cf6", abbr: "P" }, // purple
+  { bg: "#ec4899", abbr: "K" }, // pink
+  { bg: "#f59e0b", abbr: "A" }, // amber
+  { bg: "#10b981", abbr: "G" }, // green
+  { bg: "#f43f5e", abbr: "R" }, // rose
+  { bg: "#06b6d4", abbr: "C" }, // cyan
+  { bg: "#f97316", abbr: "O" }, // orange
+  { bg: "#a855f7", abbr: "V" }, // violet
+  { bg: "#34d399", abbr: "E" }, // emerald
+  { bg: "#6366f1", abbr: "I" }, // indigo
+];
+
+function hashStr(s: string): number {
+  let hash = 0;
+  for (let i = 0; i < s.length; i++) {
+    hash = ((hash << 5) - hash) + s.charCodeAt(i);
+    hash |= 0;
+  }
+  return Math.abs(hash);
+}
+
+function getSessionBadge(title: string): { color: string; letter: string } {
+  const match = title.match(/[a-zA-Z0-9]/);
+  const letter = match ? match[0].toUpperCase() : (title.slice(0, 1).toUpperCase() || "?");
+  const idx = hashStr(title) % SESSION_COLORS.length;
+  return { color: SESSION_COLORS[idx].bg, letter };
+}
+
 function SessionItem({
   session,
   isSelected,
@@ -880,7 +912,7 @@ function SessionItem({
       style={{
         display: "flex",
         alignItems: "center",
-        padding: "10px 14px",
+        padding: depth > 0 ? `10px 14px 10px ${14 + depth * 12}px` : "10px 14px",
         margin: "1px 6px",
         cursor: confirmDelete || renaming ? "default" : "pointer",
         background: confirmDelete
@@ -889,7 +921,7 @@ function SessionItem({
         borderLeft: "none",
         transition: "background 0.15s",
         opacity: deleting ? 0.5 : 1,
-        gap: 10,
+        gap: 8,
         overflow: "hidden",
         borderRadius: 8,
       }}
@@ -962,7 +994,40 @@ function SessionItem({
       ) : (
         /* ── Normal view ── */
         <>
-          <div style={{ flex: 1, minWidth: 0 }}>
+          {/* Combined fork indicator + colored badge */}
+          <div style={{
+            width: 22,
+            height: 22,
+            borderRadius: 6,
+            flexShrink: 0,
+            display: "flex",
+            alignItems: "center",
+            justifyContent: "center",
+            position: "relative",
+            background: getSessionBadge(title).color,
+          }}>
+            {/* Fork branch indicator — small diamond inside badge top-left */}
+            {depth > 0 && (
+              <div style={{
+                position: "absolute",
+                top: 0,
+                left: 0,
+                width: 8,
+                height: 8,
+                borderRadius: "50%",
+                boxShadow: "0 0 0 1.5px var(--bg)",
+                background: "var(--accent)",
+              }} />
+            )}
+            <span style={{
+              fontSize: 11,
+              fontWeight: 600,
+              color: "#fff",
+              lineHeight: 1,
+              fontFamily: "ui-monospace, monospace",
+            }}>{getSessionBadge(title).letter}</span>
+          </div>
+          <div style={{ flex: 1, minWidth: 0, overflow: "hidden" }}>
             <div
               style={{
                 fontSize: 13,
@@ -977,9 +1042,9 @@ function SessionItem({
             >
               {title}
             </div>
-            <div style={{ marginTop: 3, display: "flex", gap: 8, color: "var(--text-dim)", fontSize: 11 }}>
-              <span title={session.modified}>{formatRelativeTime(session.modified)}</span>
-              <span>{session.messageCount} msgs</span>
+            <div style={{ marginTop: 3, display: "flex", gap: 8, color: "var(--text-dim)", fontSize: 11, overflow: "hidden", whiteSpace: "nowrap" }}>
+              <span title={session.modified} style={{ flexShrink: 0 }}>{formatRelativeTime(session.modified)}</span>
+              <span style={{ flexShrink: 0 }}>{session.messageCount} msgs</span>
             </div>
           </div>
 

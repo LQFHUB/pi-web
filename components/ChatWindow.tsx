@@ -115,16 +115,14 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
   const soundEnabledRef = useRef(soundEnabled);
   soundEnabledRef.current = soundEnabled;
 
-  // Wrap agent event handler to play sound on agent_end
-  const origHandler = handleAgentEventRef.current;
+  // Play sound when agent finishes (agentRunning goes from true → false)
+  const prevAgentRunningRef = useRef(agentRunning);
   useEffect(() => {
-    handleAgentEventRef.current = (event) => {
-      if (event.type === "agent_end" && soundEnabledRef.current) {
-        playDoneSoundRef.current();
-      }
-      origHandler?.(event);
-    };
-  }, [origHandler, handleAgentEventRef]);
+    if (prevAgentRunningRef.current && !agentRunning && soundEnabledRef.current) {
+      playDoneSoundRef.current();
+    }
+    prevAgentRunningRef.current = agentRunning;
+  }, [agentRunning]);
 
   // Push session stats up to AppShell for the top bar.
   // Compare scalar fields to avoid loops from new object identity each render.

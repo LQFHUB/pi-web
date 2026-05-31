@@ -12,18 +12,36 @@ export function useAudio() {
   const enabledRef = useRef(enabled);
   useEffect(() => { enabledRef.current = enabled; }, [enabled]);
 
+  // Singleton AudioContext — avoids autoplay policy issues
+  const audioCtxRef = useRef<AudioContext | null>(null);
+
+  const getAudioCtx = useCallback(() => {
+    if (!audioCtxRef.current || audioCtxRef.current.state === "closed") {
+      audioCtxRef.current = new AudioContext();
+    }
+    // Safari/iOS resume if suspended
+    if (audioCtxRef.current.state === "suspended") {
+      audioCtxRef.current.resume();
+    }
+    return audioCtxRef.current;
+  }, []);
+
   const toggle = useCallback(() => {
     setEnabled((prev) => {
       const next = !prev;
       localStorage.setItem("pi-sound-enabled", String(next));
       return next;
     });
-  }, []);
+    // Pre-warm AudioContext on toggle (user gesture)
+    if (!enabledRef.current) {
+      try { getAudioCtx(); } catch {}
+    }
+  }, [getAudioCtx]);
 
   const playDone = useCallback(() => {
     if (!enabledRef.current) return;
     try {
-      const ctx = new AudioContext();
+      const ctx = getAudioCtx();
       const now = ctx.currentTime;
       const freqs = [523.25, 659.25];
       freqs.forEach((freq, i) => {
@@ -40,11 +58,10 @@ export function useAudio() {
         osc.start(t);
         osc.stop(t + 0.45);
       });
-      setTimeout(() => ctx.close(), 1200);
     } catch {
       // AudioContext not available
     }
-  }, []);
+  }, [getAudioCtx]);
 
   return { soundEnabled: enabled, onSoundToggle: toggle, playDoneSound: playDone, soundEnabledRef: enabledRef };
 }

@@ -26,6 +26,9 @@ export function AppShell() {
   const [modelsConfigOpen, setModelsConfigOpen] = useState(false);
   const [modelsRefreshKey, setModelsRefreshKey] = useState(0);
   const [skillsConfigOpen, setSkillsConfigOpen] = useState(false);
+  const [modelCount, setModelCount] = useState<number | null>(null);
+  const [skillCount, setSkillCount] = useState<number | null>(null);
+  const [skillsRefreshKey, setSkillsRefreshKey] = useState(0);
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const [isMobile, setIsMobile] = useState(false);
   useEffect(() => {
@@ -35,6 +38,13 @@ export function AppShell() {
     mq.addEventListener("change", handler);
     return () => mq.removeEventListener("change", handler);
   }, []);
+
+  // Fetch model count
+  useEffect(() => {
+    fetch("/api/models").then(r => r.json()).then(d => {
+      if (d.modelList?.length) setModelCount(d.modelList.length);
+    }).catch(() => {});
+  }, [modelsRefreshKey]);
   const chatInputRef = useRef<ChatInputHandle | null>(null);
   const topBarRef = useRef<HTMLDivElement>(null);
 
@@ -129,6 +139,16 @@ export function AppShell() {
     setActiveTopPanel(null);
     router.replace("/", { scroll: false });
   }, [router]);
+
+  // Fetch skill count
+  useEffect(() => {
+    const cwd = activeCwd ?? selectedSession?.cwd ?? newSessionCwd;
+    if (!cwd) { setSkillCount(null); return; }
+    fetch(`/api/skills?cwd=${encodeURIComponent(cwd)}`).then(r => r.json()).then(d => {
+      if (d.skills?.length) setSkillCount(d.skills.length);
+      else setSkillCount(0);
+    }).catch(() => {});
+  }, [activeCwd, selectedSession?.cwd, newSessionCwd, skillsRefreshKey]);
 
   const handleSelectSession = useCallback((session: SessionInfo, isRestore = false) => {
     setNewSessionCwd(null);
@@ -250,8 +270,8 @@ export function AppShell() {
       />
       <div style={{ padding: "6px", flexShrink: 0, borderTop: "1px solid var(--border)", display: "flex", flexDirection: "column", gap: 2 }}>
         {([
-          { label: "Models", onClick: () => setModelsConfigOpen(true), badge: "4", disabled: false },
-          { label: "Skills", onClick: () => setSkillsConfigOpen(true), badge: "2", disabled: !activeCwd && !selectedSession?.cwd && !newSessionCwd },
+          { label: "Models", onClick: () => setModelsConfigOpen(true), badge: modelCount !== null ? String(modelCount) : "...", disabled: false },
+          { label: "Skills", onClick: () => setSkillsConfigOpen(true), badge: skillCount !== null ? String(skillCount) : "...", disabled: !activeCwd && !selectedSession?.cwd && !newSessionCwd },
         ] as { label: string; onClick: () => void; badge: string; disabled: boolean }[]).map(({ label, onClick, badge, disabled }) => (
           <button
             key={label}
@@ -641,7 +661,7 @@ export function AppShell() {
     </button>
     {modelsConfigOpen && <ModelsConfig onClose={() => { setModelsConfigOpen(false); setModelsRefreshKey((k) => k + 1); }} />}
     {skillsConfigOpen && (activeCwd ?? selectedSession?.cwd ?? newSessionCwd) && (
-      <SkillsConfig cwd={(activeCwd ?? selectedSession?.cwd ?? newSessionCwd)!} onClose={() => setSkillsConfigOpen(false)} />
+      <SkillsConfig cwd={(activeCwd ?? selectedSession?.cwd ?? newSessionCwd)!} onClose={() => { setSkillsConfigOpen(false); setSkillsRefreshKey((k) => k + 1); }} />
     )}
     </>
   );

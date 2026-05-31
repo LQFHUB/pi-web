@@ -288,7 +288,7 @@ function ProviderDetail({ name, provider, onChange, onRename, onDelete }: {
       <div style={{ display: "flex", alignItems: "center", justifyContent: "space-between" }}>
         <SectionTitle>Provider</SectionTitle>
         <button onClick={onDelete}
-          style={{ padding: "3px 8px", background: "none", border: "1px solid var(--error)", borderRadius: 4, color: "var(--error)", cursor: "pointer", fontSize: 11, opacity: 0.8 }}>
+          style={{ padding: "3px 8px", background: "none", border: "1px solid rgba(239,68,68,0.3)", borderRadius: 4, color: "#ef4444", cursor: "pointer", fontSize: 11 }}>
           Delete
         </button>
       </div>
@@ -297,7 +297,7 @@ function ProviderDetail({ name, provider, onChange, onRename, onDelete }: {
         <TextInput value={editingName} onChange={setEditingName} placeholder="provider-name" mono />
         {editingName !== name && editingName.trim() && (
           <button onClick={() => onRename(editingName.trim())}
-            style={{ marginTop: 4, padding: "3px 10px", background: "var(--accent)", border: "none", borderRadius: 4, color: "var(--accent-text)", cursor: "pointer", fontSize: 11, alignSelf: "flex-start" }}>
+            style={{ marginTop: 4, padding: "3px 10px", background: "var(--accent)", border: "none", borderRadius: 4, color: "#fff", cursor: "pointer", fontSize: 11, alignSelf: "flex-start" }}>
             Rename
           </button>
         )}
@@ -378,12 +378,12 @@ function ThinkingLevelMapEditor({
         };
         const btnActive: React.CSSProperties = {
           background: "var(--accent)",
-          color: "var(--accent-text)",
+          color: "#fff",
           fontWeight: 600,
         };
         const btnActiveDisabled: React.CSSProperties = {
-          background: "var(--error)",
-          color: "var(--accent-text)",
+          background: "#ef4444",
+          color: "#fff",
           fontWeight: 600,
         };
 
@@ -570,10 +570,10 @@ function ModelDetail({
                 maxWidth: 260,
                 height: 24,
                 padding: "0 8px",
-                border: `1px solid ${testState.phase === "error" ? "var(--error)" : testState.phase === "success" ? "var(--success)" : "var(--border)"}`,
+                border: `1px solid ${testState.phase === "error" ? "#fecaca" : testState.phase === "success" ? "#bbf7d0" : "var(--border)"}`,
                 borderRadius: 4,
-                background: testState.phase === "error" ? "var(--user-bg)" : testState.phase === "success" ? "var(--user-bg)" : "var(--bg-panel)",
-                color: "var(--text)",
+                background: testState.phase === "error" ? "#fee2e2" : testState.phase === "success" ? "#dcfce7" : "#e5e7eb",
+                color: "#111827",
                 fontSize: 11,
                 display: "inline-flex",
                 alignItems: "center",
@@ -593,10 +593,10 @@ function ModelDetail({
             style={{
               height: 24,
               padding: "0 8px",
-              background: testState.phase === "success" ? "var(--success)" : "none",
-              border: `1px solid ${testState.phase === "success" ? "var(--success)" : "var(--border)"}`,
+              background: testState.phase === "success" ? "#16a34a" : "none",
+              border: `1px solid ${testState.phase === "success" ? "#16a34a" : "var(--border)"}`,
               borderRadius: 4,
-              color: testState.phase === "success" ? "var(--accent-text)" : (!model.id.trim() || testState.phase === "testing") ? "var(--text-dim)" : "var(--text-muted)",
+              color: testState.phase === "success" ? "#fff" : (!model.id.trim() || testState.phase === "testing") ? "var(--text-dim)" : "var(--text-muted)",
               cursor: (!model.id.trim() || testState.phase === "testing") ? "not-allowed" : "pointer",
               fontSize: 11,
               display: "inline-flex",
@@ -907,10 +907,10 @@ function OAuthDetail({ provider, onRefresh }: { provider: OAuthProvider; onRefre
           <p style={{ margin: 0, fontSize: 12, color: "var(--text-muted)" }}>{loginState.message}</p>
         )}
         {loginState.phase === "success" && (
-          <p style={{ margin: 0, fontSize: 12, color: "var(--success)" }}>Connected successfully.</p>
+          <p style={{ margin: 0, fontSize: 12, color: "#4ade80" }}>Connected successfully.</p>
         )}
         {loginState.phase === "error" && (
-          <p style={{ margin: 0, fontSize: 12, color: "var(--error)" }}>{loginState.message}</p>
+          <p style={{ margin: 0, fontSize: 12, color: "#f87171" }}>{loginState.message}</p>
         )}
       </div>
 
