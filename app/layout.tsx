@@ -19,6 +19,7 @@ const firaCode = Fira_Code({
 export const metadata: Metadata = {
   title: "Pi Agent Web",
   description: "Pi Coding Agent Web Interface",
+  icons: { icon: "/favicon.svg" },
 };
 
 export default function RootLayout({
