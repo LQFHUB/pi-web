@@ -26,6 +26,7 @@ interface Props {
   onModelChange?: (provider: string, modelId: string) => void;
   onCompact?: () => void;
   onAbortCompaction?: () => void;
+  onCommand?: (command: string) => void;
   isCompacting?: boolean;
   compactError?: string | null;
   toolPreset?: "none" | "default" | "full";
@@ -71,12 +72,13 @@ const SLASH_COMMANDS = [
   { id: "auto-compact", label: "Auto-compact", icon: "🔄", desc: "切换自动压缩", color: "#eab308" },
   { id: "auto-retry", label: "Auto-retry", icon: "♻", desc: "切换自动重试", color: "#10b981" },
   { id: "clear", label: "Clear", icon: "✕", desc: "清空输入框和图片", color: "#dc2626" },
+  { id: "plan", label: "Plan", icon: "📋", desc: "切换计划模式 (只读)", color: "#f59e0b" },
   { id: "help", label: "Help", icon: "?", desc: "显示帮助信息", color: "#6b8cff" },
 ];
 
 export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   onSend, onAbort, onSteer, onFollowUp, isStreaming, model, modelNames, modelList, onModelChange,
-  onCompact, onAbortCompaction, isCompacting, compactError, toolPreset, onToolPresetChange,
+  onCompact, onAbortCompaction, isCompacting, compactError, toolPreset, onToolPresetChange, onCommand,
   thinkingLevel, onThinkingLevelChange, availableThinkingLevels, thinkingLevelMap,
   retryInfo,
   soundEnabled, onSoundToggle,
@@ -93,6 +95,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
   const [slashSelected, setSlashSelected] = useState(0);
 
   const textareaRef = useRef<HTMLTextAreaElement>(null);
+  const isComposingRef = useRef(false);
   const dropdownRef = useRef<HTMLDivElement>(null);
   const modelDropdownPanelRef = useRef<HTMLDivElement>(null);
   const toolDropdownRef = useRef<HTMLDivElement>(null);
@@ -257,16 +260,24 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         clearImages();
         if (ta) ta.focus();
         break;
+      case "plan":
+        closeSlash();
+        setValue("");
+        onCommand?.("plan");
+        break;
       case "help": {
         const lines = SLASH_COMMANDS.map((c) => `/${c.id.padEnd(14)}${c.desc}`).join("\n");
         setValue(lines);
         break;
       }
     }
-  }, [closeSlash, onCompact, onAbort, onSteer, isStreaming, clearImages]);
+  }, [closeSlash, onCompact, onAbort, onSteer, isStreaming, clearImages, onSend, onCommand]);
 
   const handleKeyDown = useCallback(
     (e: KeyboardEvent<HTMLTextAreaElement>) => {
+      // IME composition in progress — ignore all keydown events
+      if (isComposingRef.current) return;
+
       // Slash command navigation
       if (slashOpen) {
         const filtered = SLASH_COMMANDS.filter((c) => c.id.startsWith(slashFilter));
@@ -293,7 +304,7 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
         }
       }
 
-      if (e.key === "Enter" && !e.shiftKey && !e.nativeEvent.isComposing) {
+      if (e.key === "Enter" && !e.shiftKey) {
         e.preventDefault();
         if (isStreaming && (onSteer || onFollowUp)) {
           // Default Enter sends as steer if available, else followup
@@ -487,6 +498,8 @@ export const ChatInput = forwardRef<ChatInputHandle, Props>(function ChatInput({
             onKeyDown={handleKeyDown}
             onInput={handleInput}
             onPaste={handlePaste}
+            onCompositionStart={() => { isComposingRef.current = true; }}
+            onCompositionEnd={() => { setTimeout(() => { isComposingRef.current = false; }, 0); }}
             placeholder={
               isStreaming && (onSteer || onFollowUp)
                 ? "Steer 立即注入 / Follow-up 排队…"

@@ -192,6 +192,22 @@ export function ChatWindow({ session, newSessionCwd, onAgentEnd, onSessionCreate
       onAbort={handleAbort}
       onSteer={agentRunning ? handleSteer : undefined}
       onFollowUp={agentRunning ? handleFollowUp : undefined}
+      onCommand={async (cmd) => {
+        const sid = session?.id;
+        if (!sid) return;
+        if (cmd === "plan") {
+          const { sendAgentCommand } = await import("@/lib/agent-client");
+          const result = await sendAgentCommand<{ planMode: boolean }>(sid, { type: "toggle_plan" }).catch(() => null);
+          if (result) {
+            // Show feedback (result.planMode is true/false)
+            const el = document.createElement("div");
+            el.style.cssText = "position:fixed;bottom:80px;left:50%;transform:translateX(-50%);padding:6px 14px;border-radius:6px;background:var(--bg-panel);border:1px solid var(--border);font-size:12px;color:var(--text);z-index:9999;transition:opacity .3s";
+            el.textContent = result.planMode ? "📋 计划模式 已开启（write/edit已禁用）" : "📋 计划模式 已关闭";
+            document.body.appendChild(el);
+            setTimeout(() => { el.style.opacity = "0"; setTimeout(() => el.remove(), 300); }, 2000);
+          }
+        }
+      }}
       isStreaming={agentRunning}
       model={displayModelValue}
       modelNames={modelNames}

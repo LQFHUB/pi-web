@@ -24,6 +24,7 @@ export class AgentSessionWrapper {
   private idleTimer: ReturnType<typeof setTimeout> | null = null;
   private onDestroyCallback: (() => void) | null = null;
   private _alive = true;
+  private _planModeEnabled = false;
 
   constructor(public readonly inner: AgentSessionLike) {}
 
@@ -72,8 +73,23 @@ export class AgentSessionWrapper {
       case "prompt": {
         // Fire and forget — events come via subscribe
         const promptImages = command.images as Array<{ type: "image"; data: string; mimeType: string }> | undefined;
-        this.inner.prompt(command.message as string, promptImages?.length ? { images: promptImages } : undefined).catch(() => {});
+        const msg = command.message as string;
+        this.inner.prompt(msg, promptImages?.length ? { images: promptImages } : undefined).catch((e: unknown) => console.error("[rpc] prompt error:", e));
         return null;
+      }
+
+      case "toggle_plan": {
+        this._planModeEnabled = !this._planModeEnabled;
+        const sess = this.inner as unknown as { getActiveToolNames?: () => string[]; setActiveToolsByName?: (tools: string[]) => void };
+        if (typeof sess.getActiveToolNames === "function" && typeof sess.setActiveToolsByName === "function") {
+          const activeTools = sess.getActiveToolNames();
+          if (this._planModeEnabled) {
+            sess.setActiveToolsByName(activeTools.filter((t: string) => t !== "edit" && t !== "write"));
+          } else {
+            sess.setActiveToolsByName([...activeTools, "edit", "write"]);
+          }
+        }
+        return { planMode: this._planModeEnabled };
       }
 
       case "abort":
@@ -88,6 +104,7 @@ export class AgentSessionWrapper {
           sessionFile: this.inner.sessionFile ?? "",
           isStreaming: this.inner.isStreaming,
           isCompacting: this.inner.isCompacting,
+          planMode: this._planModeEnabled,
           autoCompactionEnabled: this.inner.autoCompactionEnabled,
           autoRetryEnabled: this.inner.autoRetryEnabled,
           model: model ? { id: model.id, provider: model.provider } : undefined,
@@ -301,6 +318,9 @@ export async function startRpcSession(
     if (toolNames !== undefined) {
       toolsOption = toolNames.length === 0 ? [] : allCodingToolNames;
     }
+
+    // DEBUG: check what getAgentDir() returns vs actual config file
+    console.log("[rpc] agentDir:", agentDir);
 
     // Use a resource loader that appends a Chinese language instruction to the system prompt
     const resourceLoader = new DefaultResourceLoader({
